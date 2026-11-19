@@ -3,7 +3,7 @@
 // which provides KV_REST_API_URL and KV_REST_API_TOKEN. Without it this returns 501
 // and the site falls back to saving on each device only.
 const MAX_BYTES = 100000;
-const KEYS = ['calc', 'ov', 'hsel', 'hprice', 'hconf', 'myh', 'gf', 'd0', 'd1', 'picked', 'todo'];
+const KEYS = ['calc', 'ov', 'hsel', 'hprice', 'hconf', 'offers', 'fx', 'myh', 'gf', 'd0', 'd1', 'picked', 'todo'];
 
 module.exports = async (req, res) => {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;

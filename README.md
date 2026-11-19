@@ -28,6 +28,7 @@ Everything for a trip — prices, flights, routes, hotels, tips, checklist — l
 | Hotels with reviews | `hotels` |
 | Must-do preparation (orange box) | `mustDo` |
 | Traveller tips | `tips` |
+| Offers from travel companies | `offers` |
 
 Each `<trip>/trip-report.pdf` is a print of `<trip>/index.html?print=1` (A4, 62% scale, backgrounds on).
 
