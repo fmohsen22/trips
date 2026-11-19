@@ -116,7 +116,7 @@
   /* ---------- state ---------- */
   const scen = id => T.scenarios.find(s => s.id === id);
   let calc = null;
-  try { if (location.hash.startsWith('#plan=')) { const sh = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(6))))); calc = sh.calc; if (sh.ov) { ov = sh.ov; store.set('ov', ov); } } } catch (e) { calc = null; }
+  try { if (location.hash.startsWith('#plan=')) { const sh = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(6))))); calc = sh.calc; if (sh.ov) { ov = sh.ov; store.set('ov', ov); } window.__sh = sh; } } catch (e) { calc = null; }
   if (calc && (!Array.isArray(calc.stops) || !Array.isArray(calc.acts))) calc = null;
   const sharedPlan = !!calc;
   if (!calc) calc = store.get('calc', null);
@@ -240,25 +240,58 @@
   }
 
   /* ---------- hotels ---------- */
-  const hotelsFor = k => (T.hotels && T.hotels[k]) || [];
+  let hsel = store.get('hsel', {}), hprice = store.get('hprice', {}), myHotels = store.get('myh', []);
+  if (window.__sh) { const sh = window.__sh; if (sh.hsel) { hsel = sh.hsel; store.set('hsel', hsel); } if (sh.hprice) { hprice = sh.hprice; store.set('hprice', hprice); } if (Array.isArray(sh.myHotels)) { myHotels = sh.myHotels.filter(h => h && typeof h.name === 'string' && T.places[h.place]).map(h => Object.assign(h, { mine: true, url: /^https?:\/\//i.test(h.url || '') ? h.url : '' })); store.set('myh', myHotels); } }
+  const slug = x => String(x).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const hotelsFor = k => ((T.hotels && T.hotels[k]) || []).map(h => Object.assign({ id: k + '-' + slug(h.name) }, h)).concat(myHotels.filter(h => h.place === k));
+  const hPrice = h => typeof hprice[h.id] === 'number' ? hprice[h.id] : h.price;
+  const findHotel = (k, id) => hotelsFor(k).find(h => h.id === id);
+  function syncHotel(k) { const h = findHotel(k, hsel[k]); if (h && typeof hPrice(h) === 'number') ov['hotel:' + k] = hPrice(h); else { delete ov['hotel:' + k]; delete hsel[k]; } store.set('ov', ov); store.set('hsel', hsel); }
   function hotelCard(h, k) {
-    return `<div class="card hotel"><div class="tip-top">${pill(h.tier)}<span class="status ${h.score ? 'good' : 'info'}">${h.score ? '★ ' + esc(h.score) : 'score not seen'}</span></div>
-      <h3>${esc(h.name)}</h3><p class="muted small">${esc(h.area)}${h.stars ? ' · ' + esc(h.stars) : ''}</p>
-      <div class="mode-price">${h.price ? '~' + eur(h.price) : '–'} <small>per night${h.priceNote ? ' · ' + esc(h.priceNote) : ''}</small></div>
-      <ul class="pros"><li>${esc(h.good)}</li></ul>${h.watch ? `<ul class="cons"><li>${esc(h.watch)}</li></ul>` : ''}
-      ${srcLinks(h.src)}${h.price && !PRINT ? `<div class="det-actions"><button class="btn small ${ov['hotel:' + k] === h.price ? 'primary' : ''}" data-usehotel="${k}" data-val="${h.price}">${ov['hotel:' + k] === h.price ? '✓ used in all calculations' : 'Use this price for ' + esc(T.places[k].short)}</button></div>` : ''}</div>`;
+    const on = hsel[k] === h.id, p = hPrice(h);
+    return `<div class="card hotel ${on ? 'chosen' : ''}"><div class="tip-top">${pill(h.mine ? 'added by us' : h.tier, h.mine ? 'accent' : '')}<span class="status ${h.score ? 'good' : 'info'}">${h.score ? '★ ' + esc(h.score) : h.mine ? 'our own find' : 'score not seen'}</span></div>
+      <h3>${esc(h.name)}</h3><p class="muted small">${esc(h.area || T.places[k].short)}${h.stars ? ' · ' + esc(h.stars) : ''}${h.breakfast ? ' · ' + esc(h.breakfast) : ''}</p>
+      ${h.good ? `<ul class="pros"><li>${esc(h.good)}</li></ul>` : ''}${h.watch ? `<ul class="cons"><li>${esc(h.watch)}</li></ul>` : ''}
+      ${PRINT ? `<div class="mode-price">${typeof p === 'number' ? '~' + eur(p) : '–'} <small>per night</small></div>` : `<label class="field">Price per night € ${typeof h.price === 'number' ? `<small>(we saw about ${eur(h.price)}${h.priceNote ? ', ' + esc(h.priceNote) : ''})</small>` : ''}<input type="number" min="0" step="1" data-hprice="${esc(h.id)}" data-hk="${k}" class="${typeof hprice[h.id] === 'number' ? 'set' : ''}" value="${typeof hprice[h.id] === 'number' ? hprice[h.id] : ''}" placeholder="${typeof h.price === 'number' ? h.price : 'type the price you found'}"></label>`}
+      <p class="small"><a href="https://www.booking.com/searchresults.html?ss=${encodeURIComponent(h.name)}&group_adults=2&no_rooms=1" target="_blank" rel="noopener">Check the live price on Booking.com ↗</a>${h.url ? ` · <a href="${esc(h.url)}" target="_blank" rel="noopener">our link ↗</a>` : ''}</p>
+      ${srcLinks(h.src)}${PRINT ? '' : `<div class="det-actions"><button class="btn small ${on ? 'primary' : ''}" data-usehotel="${k}" data-hid="${esc(h.id)}">${on ? '✓ Chosen for ' + esc(T.places[k].short) : 'Choose for ' + esc(T.places[k].short)}</button>${h.mine ? `<button class="btn small" data-myhdel="${esc(h.id)}">Delete</button>` : ''}</div>`}</div>`;
   }
   function hotelsMini(places) {
-    return places.filter(k => hotelsFor(k).length).map(k => `<h4>${T.places[k].emoji} ${esc(T.places[k].short)}</h4><ul class="hotelmini">${hotelsFor(k).map(h => `<li><b>${esc(h.name)}</b> <span class="muted">${esc(h.area)}</span><span>${h.score ? '★ ' + esc(h.score.split(' ')[0]) : ''} ${h.price ? '· ~' + eur(h.price) : ''}</span></li>`).join('')}</ul>`).join('');
+    return places.filter(k => hotelsFor(k).length).map(k => `<h4>${T.places[k].emoji} ${esc(T.places[k].short)}</h4><ul class="hotelmini">${hotelsFor(k).map(h => `<li class="${hsel[k] === h.id ? 'chosen' : ''}"><span><b>${hsel[k] === h.id ? '✓ ' : ''}${esc(h.name)}</b> <span class="muted">${esc(h.area || '')}</span></span><span>${h.score ? '★ ' + esc(h.score.split(' ')[0]) : ''} ${typeof hPrice(h) === 'number' ? '· ~' + eur(hPrice(h)) : ''}</span></li>`).join('')}</ul>`).join('');
+  }
+  function renderHotelSum() {
+    const sid = views.hroute || T.meta.recommended, mineSel = sid === 'mine';
+    const cfg = mineSel ? calc : cfgFromScenario(scen(sid)), r = compute(cfg);
+    const nights = {}; r.timeline.forEach(t => nights[t.place] = (nights[t.place] || 0) + t.nights);
+    const hotelCost = k => r.lines.hotel.filter(l => l.label.startsWith(T.places[k].name)).reduce((a, l) => a + l.amt, 0);
+    $('#hotel-sum').innerHTML = `<div class="card"><h3>Hotels for this trip</h3>
+      <div class="chips">${T.scenarios.map(x => `<button class="chip btnchip ${sid === x.id ? 'on' : ''}" data-hroute="${x.id}">${x.id} ${esc(x.short)}</button>`).join('')}<button class="chip btnchip ${mineSel ? 'on' : ''}" data-hroute="mine">★ Our own plan</button></div>
+      <table class="mini sumtbl"><thead><tr><th>Stop</th><th>Hotel</th><th class="num">Per night</th><th class="num">Total</th></tr></thead><tbody>
+      ${Object.keys(nights).map(k => `<tr><td>${T.places[k].emoji} <b>${esc(T.places[k].short)}</b><br><small class="muted">${nights[k]} night${nights[k] > 1 ? 's' : ''}</small></td>
+        <td><select data-hsel="${k}" aria-label="Hotel in ${esc(T.places[k].short)}"><option value="">No hotel chosen — typical ${esc(HOTEL_LVLS[cfg.hotelLvl])} price</option>${hotelsFor(k).map(h => `<option value="${esc(h.id)}" ${hsel[k] === h.id ? 'selected' : ''} ${typeof hPrice(h) === 'number' ? '' : 'disabled'}>${esc(h.name)}${typeof hPrice(h) === 'number' ? ' · ' + eur(hPrice(h)) : ' · add a price first'}</option>`).join('')}</select></td>
+        <td class="num">${eur(pr('hotel:' + k, T.places[k].hotel[cfg.hotelLvl]))}</td><td class="num"><b>${eur(hotelCost(k))}</b></td></tr>`).join('')}
+      <tr><td colspan="3"><b>All hotels</b></td><td class="num"><b>${eur(r.cats.hotel)}</b></td></tr>
+      <tr><td colspan="3"><b>Whole trip for two</b> ${budgetBadge(r.total)}</td><td class="num"><b>${eur(r.total)}</b></td></tr></tbody></table>
+      <p class="muted small">A chosen hotel is used for that place in every route, the comparison and the calculator. Its price counts for every night; without a chosen hotel we use the typical price plus the New-Year surcharge for 29 Dec – 2 Jan.</p></div>`;
   }
   function renderHotels() {
-    const pk = Object.keys(T.places).filter(k => hotelsFor(k).length);
-    const cur = views.hplace && pk.includes(views.hplace) ? views.hplace : pk[0];
-    if (!pk.length) { $('#hotels').innerHTML = '<h2>Where to stay</h2><p class="card">Hotel picks are being researched and will appear here shortly.</p>'; return; }
-    $('#hotels').innerHTML = `<div class="head"><div><h2>Where to stay</h2><p class="muted">Well-reviewed hotels for every stop, in three price classes. Scores and prices are as seen on ${esc(T.meta.updatedHuman)} and are not quotes for your nights — tap “Use this price” to put a hotel into every calculation, then replace it with the real quote.</p></div></div>
+    const pk = Object.keys(T.places);
+    const cur = views.hplace && pk.includes(views.hplace) ? views.hplace : 'pq';
+    $('#hotels').innerHTML = `<div class="head"><div><h2>Hotels</h2><p class="muted">Pick a hotel for each stop and see what the trip costs. Prices are what we saw on ${esc(T.meta.updatedHuman)}, not quotes for your nights — check the live price, type it in, and everything recalculates. You can add your own finds too.</p></div></div>
       ${T.hotelNote ? `<div class="note"><p>${esc(T.hotelNote)}</p></div>` : ''}
-      ${PRINT ? '' : `<div class="chips">${pk.map(k => `<button class="chip btnchip ${k === cur ? 'on' : ''}" data-hplace="${k}">${T.places[k].emoji} ${esc(T.places[k].short)}</button>`).join('')}</div>`}
-      ${(PRINT ? pk : [cur]).map(k => `<h3>${T.places[k].emoji} ${esc(T.places[k].name)}</h3><p class="muted small">${esc(T.places[k].hotelNote || '')} Our default budget: ${eur(T.places[k].hotel.budget)} simple · ${eur(T.places[k].hotel.mid)} good · ${eur(T.places[k].hotel.nice)} nice per night.</p><div class="grid3">${hotelsFor(k).map(h => hotelCard(h, k)).join('')}</div>`).join('')}`;
+      <div id="hotel-sum"></div>
+      <h2>Browse hotels</h2>
+      ${PRINT ? '' : `<div class="chips">${pk.map(k => `<button class="chip btnchip ${k === cur ? 'on' : ''}" data-hplace="${k}">${T.places[k].emoji} ${esc(T.places[k].short)} <small>(${hotelsFor(k).length})</small></button>`).join('')}</div>`}
+      ${(PRINT ? pk.filter(k => hotelsFor(k).length) : [cur]).map(k => `<h3>${T.places[k].emoji} ${esc(T.places[k].name)}</h3><p class="muted small">${esc(T.places[k].hotelNote || '')} Typical prices: ${eur(T.places[k].hotel.budget)} simple · ${eur(T.places[k].hotel.mid)} good · ${eur(T.places[k].hotel.nice)} nice per night.</p>
+        <div class="grid3">${hotelsFor(k).map(h => hotelCard(h, k)).join('') || '<p class="muted">No hotels here yet — add one below.</p>'}</div>`).join('')}
+      ${PRINT ? '' : `<div class="card addhotel"><h3>➕ Add a hotel we found ourselves</h3><div class="addgrid">
+        <label class="field">Place<select id="myh-place">${pk.map(k => `<option value="${k}" ${k === cur ? 'selected' : ''}>${T.places[k].emoji} ${esc(T.places[k].name)}</option>`).join('')}</select></label>
+        <label class="field">Hotel name<input type="text" id="myh-name" maxlength="80" placeholder="e.g. a friend’s recommendation"></label>
+        <label class="field">Price per night €<input type="number" id="myh-price" min="0" step="1" placeholder="e.g. 60"></label>
+        <label class="field">Link (optional)<input type="url" id="myh-url" placeholder="https://…"></label></div>
+        <label class="field">Note (optional)<input type="text" id="myh-note" maxlength="160" placeholder="breakfast included, pool, 5 min to beach…"></label>
+        <button class="btn primary" id="myh-add">Add hotel</button> <span class="muted small" id="myh-msg"></span></div>`}`;
+    renderHotelSum();
   }
 
   /* ---------- OVERVIEW ---------- */
@@ -476,7 +509,7 @@
   /* ---------- CHECKLIST & SOURCES ---------- */
   function renderPrep() {
     const done = store.get('todo', {});
-    $('#prep').innerHTML = `<div class="head"><div><h2>Before you go</h2><p class="muted">Tick things off — it is remembered on this device.</p></div></div>
+    $('#prep').innerHTML = `<div class="head"><div><h2>Before you go and what to pack</h2><p class="muted">Bookings, papers, health, clothes and everything for the suitcase. Tick things off — it is remembered on this device.</p></div></div>
       <div class="grid2">${T.checklist.map(g => `<div class="card"><h3>${g.icon} ${esc(g.t)}</h3>${g.items.map((it, i) => { const id = g.t + i; return `<label class="check todo"><input type="checkbox" data-todo="${esc(id)}" ${done[id] ? 'checked' : ''}><span>${esc(it.t)} <small>${esc(it.d || '')} ${srcLinks(it.src)}</small></span></label>`; }).join('')}</div>`).join('')}</div>
       ${T.health ? `<h2>Health and vaccinations</h2><p class="muted">${esc(T.health.intro)}</p><div class="tablewrap"><table class="tbl"><thead><tr><th>Vaccine / risk</th><th>For this trip</th><th>What to know</th></tr></thead><tbody>${T.health.rows.map(r => `<tr><td><b>${esc(r.v)}</b></td><td><span class="status ${r.lvl}">${esc(r.lbl)}</span><br><small>${esc(r.who)}</small></td><td>${esc(r.d)}</td></tr>`).join('')}</tbody></table></div><p>${srcLinks(T.health.src)}</p>` : ''}
       ${T.entry ? `<h2>Visas and entry — for your two passports</h2><div class="grid2">${T.entry.map(e => `<div class="card"><div class="ico">${e.icon}</div><h3>${esc(e.t)}</h3>${e.p.map(x => `<p>${esc(x)}</p>`).join('')}${srcLinks(e.src)}</div>`).join('')}</div>` : ''}
@@ -502,7 +535,13 @@
     const t = e.target.closest('button, [data-open], a'); if (!t) return;
     const d = t.dataset;
     if (d.saver) { if (d.saver === 'all') SAVERS.forEach(sv => { if (!sv.risky && !(calc.undo && calc.undo[sv.id]) && saverState(sv).saving > 0.5) toggleSaver(sv.id); }); else toggleSaver(d.saver); saveCalc(); return renderCalc(); }
-    if (d.usehotel) { const k = 'hotel:' + d.usehotel; if (ov[k] === +d.val) delete ov[k]; else ov[k] = +d.val; store.set('ov', ov); return rerender(); }
+    if (d.usehotel) { const k = d.usehotel, h = findHotel(k, d.hid); if (hsel[k] === d.hid) delete hsel[k]; else if (h && typeof hPrice(h) === 'number') hsel[k] = d.hid; else { const i = t.closest('.hotel').querySelector('[data-hprice]'); if (i) i.focus(); return; } syncHotel(k); return renderHotels(); }
+    if (d.hroute) { views.hroute = d.hroute; return renderHotelSum(); }
+    if (d.myhdel) { const h = myHotels.find(x => x.id === d.myhdel); myHotels = myHotels.filter(x => x.id !== d.myhdel); store.set('myh', myHotels); if (h) syncHotel(h.place); return renderHotels(); }
+    if (t.id === 'myh-add') { const name = $('#myh-name').value.trim(), k = $('#myh-place').value, pv = $('#myh-price').value; if (!name) { $('#myh-msg').textContent = 'Please type the hotel name.'; return; }
+      let url = $('#myh-url').value.trim(); if (url && !/^https?:\/\//i.test(url)) url = '';
+      const h = { id: 'my-' + Date.now().toString(36), place: k, name, mine: true, url, good: $('#myh-note').value.trim() }; if (pv !== '' && +pv >= 0) h.price = +pv;
+      myHotels.push(h); store.set('myh', myHotels); views.hplace = k; if (typeof h.price === 'number') { hsel[k] = h.id; syncHotel(k); } return renderHotels(); }
     if (d.hplace) { views.hplace = d.hplace; return renderHotels(); }
     if (d.go) { e.preventDefault(); if (location.hash.startsWith('#plan=')) history.replaceState(null, '', '#'); return go(d.go); }
     if (d.close !== undefined) return $('#dlg').close();
@@ -522,10 +561,10 @@
     if (d.level) { calc.level = d.level; saveCalc(); return renderCalc(); }
     if (d.hl) { calc.hotelLvl = d.hl; custom(); saveCalc(); return renderCalc(); }
     if (d.fl) { calc.foodLvl = d.fl; custom(); saveCalc(); return renderCalc(); }
-    if (t.id === 'ov-reset') { ov = {}; store.set('ov', ov); return renderMine(); }
+    if (t.id === 'ov-reset') { ov = {}; hsel = {}; store.set('ov', ov); store.set('hsel', hsel); return renderMine(); }
     if (t.id === 'c-reset') { calc = cfgFromScenario(scen(T.meta.recommended)); saveCalc(); return renderCalc(); }
     if (t.id === 'c-share') {
-      const url = location.origin + location.pathname + '#plan=' + btoa(unescape(encodeURIComponent(JSON.stringify({ calc, ov }))));
+      const url = location.origin + location.pathname + '#plan=' + btoa(unescape(encodeURIComponent(JSON.stringify({ calc, ov, hsel, hprice, myHotels }))));
       const ok = () => $('#share-msg').textContent = '✓ Link copied — send it to your travel partner.';
       (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(ok, () => { prompt('Copy this link:', url); });
     }
@@ -537,6 +576,7 @@
     const t = e.target, d = t.dataset;
     if (d.cmp) { compareSel = t.checked ? compareSel.concat(d.cmp) : compareSel.filter(x => x !== d.cmp); store.set('cmp', compareSel); return renderCompare(); }
     if (d.todo) { const o = store.get('todo', {}); o[d.todo] = t.checked; return store.set('todo', o); }
+    if (d.hsel) { if (t.value) hsel[d.hsel] = t.value; else delete hsel[d.hsel]; syncHotel(d.hsel); return renderHotels(); }
     if (d.stop !== undefined) { calc.stops[+d.stop].place = t.value; custom(); saveCalc(); return renderCalc(); }
     if (t.id === 'c-flight') { calc.flightId = t.value; custom(); saveCalc(); return renderCalc(); }
     if (d.legmode) { calc.legMode[d.legmode] = t.value; custom(); saveCalc(); return renderCalcResult(); }
@@ -549,7 +589,8 @@
     const t = e.target, d = t.dataset;
     if (t.id === 'c-shop') { calc.shopping = +t.value; $('#o-shop').textContent = eur(calc.shopping); }
     else if (t.id === 'c-res') { calc.reservePct = +t.value; $('#o-res').textContent = calc.reservePct + '%'; }
-    else if (d.ov) { if (t.value === '' || isNaN(+t.value) || +t.value < 0) delete ov[d.ov]; else ov[d.ov] = +t.value; store.set('ov', ov); t.classList.toggle('set', d.ov in ov); if (tab === 'mine') return renderMineSummary(); }
+    else if (d.hprice) { if (t.value === '' || isNaN(+t.value) || +t.value < 0) delete hprice[d.hprice]; else hprice[d.hprice] = +t.value; store.set('hprice', hprice); t.classList.toggle('set', d.hprice in hprice); if (hsel[d.hk] === d.hprice) syncHotel(d.hk); return renderHotelSum(); }
+    else if (d.ov) { if (t.value === '' || isNaN(+t.value) || +t.value < 0) delete ov[d.ov]; else ov[d.ov] = +t.value; store.set('ov', ov); if (d.ov.startsWith('hotel:')) { delete hsel[d.ov.slice(6)]; store.set('hsel', hsel); } t.classList.toggle('set', d.ov in ov); if (tab === 'mine') return renderMineSummary(); }
     else if (t.id === 'tip-q') { views.tipQ = t.value; return renderTips(); }
     else return;
     saveCalc(); renderCalcResult();

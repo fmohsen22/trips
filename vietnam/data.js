@@ -386,7 +386,44 @@
         { t: 'Install Grab and Xanh SM, add a card to Grab', d: '' },
         { t: 'Install an eSIM (Viettel) and Google Translate with offline Vietnamese', d: '' },
         { t: 'Tell your bank you are travelling; bring two cards', d: 'Use VPBank or ACB machines and decline conversion.', src: [src.atm] },
-        { t: 'Keep 500,000 and 20,000 notes apart', d: 'Both are blue.' }] }
+        { t: 'Keep 500,000 and 20,000 notes apart', d: 'Both are blue.' }] },
+      { icon: '👕', t: 'Clothes (south: 30 °C and dry)', items: [
+        { t: 'Light, loose clothes: 5–6 T-shirts or tops, 2–3 shorts or skirts, 1–2 summer dresses or linen trousers', d: 'Cotton or linen. Laundry is cheap everywhere (about €1–2 per kilo), so pack for a week, not for seventeen days.' },
+        { t: 'Two or three sets of swimwear each', d: 'So one is always dry.' },
+        { t: 'One outfit that covers shoulders and knees', d: 'Needed for temples and pagodas; a light scarf or sarong works too.' },
+        { t: 'A light long-sleeved shirt and long trousers', d: 'For evenings with mosquitoes, strong sun and cold air-conditioning on planes and buses.' },
+        { t: 'One slightly nicer outfit', d: 'For New Year’s Eve and rooftop bars — some have a no-flip-flops rule.' },
+        { t: 'Sandals or flip-flops plus comfortable walking shoes or trainers', d: '' },
+        { t: 'Sun hat and sunglasses', d: '' },
+        { t: 'Warm layers for the flight — and for Vienna on the way home', d: 'You leave and return in winter; a jacket you can stuff in the hand luggage.' },
+        { t: 'Only if you add Hanoi or Hoi An: fleece or light down jacket, rain jacket, closed shoes, long trousers', d: 'Hanoi is 10–20 °C and damp in January; Hoi An is showery.' }] },
+      { icon: '🏖️', t: 'Beach and sun', items: [
+        { t: 'Reef-safe sunscreen SPF 50, plenty of it', d: 'Good sunscreen is expensive and hard to find in Vietnam; whitening creams are everywhere.' },
+        { t: 'After-sun or aloe gel', d: '' },
+        { t: 'Mosquito repellent (DEET or icaridin)', d: 'Use it in the daytime too — dengue mosquitoes bite by day.' },
+        { t: 'Your own mask and snorkel if you care about fit', d: 'Tour gear is basic.' },
+        { t: 'Dry bag or waterproof phone pouch', d: 'For boat trips.' },
+        { t: 'Quick-dry travel towel or sarong', d: 'Hotels provide beach towels, boats often do not.' },
+        { t: 'Rash vest or swim shirt', d: 'The sun on a snorkel trip is fierce.' }] },
+      { icon: '🔌', t: 'Electronics and documents', items: [
+        { t: 'Plug adapter for Irish plugs', d: 'Vietnam uses 220 V with two-pin sockets that take European round pins (and US flat pins). Austrian plugs fit; Irish three-pin plugs need an adapter.' },
+        { t: 'Power bank and charging cables', d: 'Power banks must go in hand luggage.' },
+        { t: 'Passports, printed e-visas, and photos of both on your phones', d: '' },
+        { t: 'Printed or offline copies of flight and hotel bookings and the insurance policy with its emergency number', d: '' },
+        { t: 'Two bank cards kept in different bags, plus about €100–200 in cash as backup', d: '' },
+        { t: 'Driving licence only if you really plan to drive', d: 'A car licence does not cover a scooter.' }] },
+      { icon: '💊', t: 'Small pharmacy', items: [
+        { t: 'Your regular medicines in original packaging, enough for the whole trip', d: 'Carry them in hand luggage with a copy of the prescription.' },
+        { t: 'Rehydration salts and something for an upset stomach', d: '' },
+        { t: 'Painkillers, plasters, antiseptic, antihistamine cream or tablets for bites', d: '' },
+        { t: 'Motion-sickness tablets', d: 'For boat trips and any ferry.' },
+        { t: 'Hand sanitiser and a pack of tissues', d: 'Not every toilet has paper.' },
+        { t: 'Contact-lens solution, tampons, and any toiletries you are particular about', d: 'Available in cities but brands differ; scarce on the island.' }] },
+      { icon: '🎒', t: 'Bags and luggage rules', items: [
+        { t: 'One checked suitcase each, 20–23 kg — check your ticket', d: 'Leave space for the things you buy.' },
+        { t: 'Hand luggage that weighs under 7 kg if you fly Vietjet inside Vietnam', d: 'They weigh it at the gate.' },
+        { t: 'A small day bag that closes with a zip, worn across the body', d: 'Protects against phone and bag snatching in Saigon.' },
+        { t: 'Refillable water bottle', d: 'Most hotels have refill stations; never drink tap water.' }] }
     ],
 
     sources: []
