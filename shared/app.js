@@ -42,7 +42,7 @@
     set(k, v) { try { localStorage.setItem(PFX + k, JSON.stringify(v)); if (SYNC_KEYS.includes(k)) { localStorage.setItem('smv.ts', String(Date.now())); schedulePush(); } } catch (e) { } }
   };
   /* ---------- shared state (both travellers see the same choices) ---------- */
-  const SYNC_KEYS = ['calc', 'ov', 'hsel', 'hprice', 'myh', 'gf', 'd0', 'd1', 'picked', 'todo'];
+  const SYNC_KEYS = ['calc', 'ov', 'hsel', 'hprice', 'hconf', 'myh', 'gf', 'd0', 'd1', 'picked', 'todo'];
   const API = '/api/state?trip=' + encodeURIComponent(M.key);
   let syncOn = false, pushT = null;
   const localTs = () => { try { return +localStorage.getItem('smv.ts') || 0; } catch (e) { return 0; } };
@@ -113,15 +113,23 @@
       `${eur(base)} per person return × 2 — ${own ? '★ the price you typed in' : has(fk) ? '★ your own price' : LEVELS[level].toLowerCase() + ' estimate'}.${ojx ? ` Plus about ${eur(ojx)} each for flying home from ${T.places[dep].short} instead of ${T.places[HUB].short} (estimate).` : ''} ${own ? '' : (f0.bag || '') + ' ' + (f0.note || '')}`, f0.src);
 
     const stops = cfg.stops.filter(s => s.nights > 0);
-    let night = 0; const timeline = [];
+    let night = 0, hStops = 0, hConf = 0; const timeline = [];
     stops.forEach(s => {
       const p = P[s.place];
       const hk = 'hotel:' + s.place, rate = pr(hk, p.hotel[cfg.hotelLvl]);
-      let peakN = 0; if (cfg.peak && !has(hk)) for (let n = night; n < night + s.nights; n++) if (isPeak(n)) peakN++;
-      const normN = s.nights - peakN;
-      const amt = normN * rate + peakN * rate * p.peakMult;
-      add('hotel', `${p.name} · ${s.nights} night${s.nights > 1 ? 's' : ''}`, amt,
-        (normN ? `${normN} × ${eur(rate)}` : '') + (peakN ? `${normN ? ' + ' : ''}${peakN} New-Year night${peakN > 1 ? 's' : ''} × ${eur(rate * p.peakMult)} (+${Math.round((p.peakMult - 1) * 100)}%)` : '') + ` · double room, ${has(hk) ? '★ your own price for every night' : HOTEL_LVLS[cfg.hotelLvl]}. ${p.hotelNote || ''}`, p.src);
+      const a0 = isoAdd(d0, night), b0 = isoAdd(d0, night + s.nights), selH = useOv && hsel[s.place] ? findHotel(s.place, hsel[s.place]) : null, st = selH && selH.stay, cf0 = selH && hconf[selH.id];
+      const cf = cf0 && cf0.a === a0 && cf0.b === b0 ? cf0 : (st && st.a === a0 && st.b === b0 ? st : cf0);
+      hStops++;
+      if (cf && cf.a === a0 && cf.b === b0 && typeof cf.total === 'number') {
+        hConf++;
+        add('hotel', `${p.name} · ${s.nights} night${s.nights > 1 ? 's' : ''} · ${selH.name}`, cf.total, `★ Real price: the total we typed in for ${selH.name} for exactly these nights (${eur(cf.total / s.nights)} a night).`, p.src);
+      } else {
+        let peakN = 0; if (cfg.peak && (!has(hk) || selH) && !st) for (let n = night; n < night + s.nights; n++) if (isPeak(n)) peakN++;
+        const normN = s.nights - peakN;
+        const amt = normN * rate + peakN * rate * p.peakMult;
+        add('hotel', `${p.name} · ${s.nights} night${s.nights > 1 ? 's' : ''}${selH ? ' · ' + selH.name : ''}`, amt,
+          'Estimate, not a real price for these nights: ' + (normN ? `${normN} × ${eur(rate)}` : '') + (peakN ? `${normN ? ' + ' : ''}${peakN} New-Year night${peakN > 1 ? 's' : ''} × ${eur(rate * p.peakMult)}` : '') + ` · ${selH ? 'the price we saw for ' + selH.name + ' on other dates' : has(hk) ? '★ your own price for every night' : HOTEL_LVLS[cfg.hotelLvl] + ', typical price'}. Type the Booking total on the Hotels page to make it real. ${p.hotelNote || ''}`, p.src);
+      }
       const fr = pr('food:' + s.place, p.food[cfg.foodLvl]);
       add('food', `${p.name} · ${s.nights} day${s.nights > 1 ? 's' : ''}`, s.nights * fr, `${s.nights} × ${eur(fr)} for two per day.${mine('food:' + s.place)} ${p.foodNote || ''}`, p.src);
       const lp = pr('local:' + s.place, p.localPerDay);
@@ -155,7 +163,7 @@
     const beachNights = stops.filter(s => P[s.place].beach).reduce((s, x) => s + x.nights, 0);
     return {
       total: sub + reserve, cats, lines, flight: f, legs, timeline,
-      m: { nights: night, beachNights, moves: stops.length, transitH, hassle: hassle + Math.max(0, stops.length - 1), intlH: f.durOut + f.durBack, stopsIntl: f.stops }
+      m: { hStops, hConf, flightReal: own, nights: night, beachNights, moves: stops.length, transitH, hassle: hassle + Math.max(0, stops.length - 1), intlH: f.durOut + f.durBack, stopsIntl: f.stops }
     };
   }
 
@@ -288,6 +296,7 @@
   }
 
   /* ---------- hotels ---------- */
+  let hconf = store.get('hconf', {}) || {};
   let hsel = store.get('hsel', {}), hprice = store.get('hprice', {}), myHotels = (store.get('myh', []) || []).filter(h => h && typeof h.name === 'string' && T.places[h.place]).map(h => Object.assign(h, { mine: true, url: /^https?:\/\//i.test(h.url || '') ? h.url : '' }));
   if (window.__sh) { const sh = window.__sh; if (sh.hsel) { hsel = sh.hsel; store.set('hsel', hsel); } if (sh.hprice) { hprice = sh.hprice; store.set('hprice', hprice); } if (Array.isArray(sh.myHotels)) { myHotels = sh.myHotels.filter(h => h && typeof h.name === 'string' && T.places[h.place]).map(h => Object.assign(h, { mine: true, url: /^https?:\/\//i.test(h.url || '') ? h.url : '' })); store.set('myh', myHotels); } }
   const slug = x => String(x).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -302,9 +311,12 @@
     return `<div class="card hotel ${on ? 'chosen' : ''}"><div class="tip-top">${pill(h.mine ? 'added by us' : ({ simple: 'simple · good value', good: 'good 3–4★', nice: 'nice 4–5★' }[h.tier] || h.tier), h.mine ? 'accent' : '')}<span class="status ${h.score ? 'good' : 'info'}">${h.score ? '★ ' + esc(h.score) : h.mine ? 'our own find' : 'score not seen'}</span></div>
       <h3>${esc(h.name)}</h3><p class="muted small">${esc(h.area || T.places[k].short)}${h.stars ? ' · ' + esc(h.stars) : ''}${h.breakfast ? ' · ' + esc(h.breakfast) : ''}</p>
       ${h.good ? `<ul class="pros"><li>${esc(h.good)}</li></ul>` : ''}${h.watch ? `<ul class="cons"><li>${esc(h.watch)}</li></ul>` : ''}
-      ${PRINT ? `<div class="mode-price">${typeof p === 'number' ? '~' + eur(p) : '–'} <small>per night</small></div>` : `<label class="field">Price per night € ${typeof h.price === 'number' ? `<small>(we saw about ${eur(h.price)}${h.priceNote ? ', ' + esc(h.priceNote) : ''})</small>` : ''}<input type="number" min="0" step="1" data-hprice="${esc(h.id)}" data-hk="${k}" class="${typeof hprice[h.id] === 'number' ? 'set' : ''}" value="${typeof hprice[h.id] === 'number' ? hprice[h.id] : ''}" placeholder="${typeof h.price === 'number' ? h.price : 'type the price you found'}"></label>`}
+      ${(() => { const sd = stayDates(k), c0 = hconf[h.id], cf = sd && c0 && c0.a === sd.a && c0.b === sd.b ? c0 : (sd && h.stay && h.stay.a === sd.a && h.stay.b === sd.b ? h.stay : c0), real = sd && cf && cf.a === sd.a && cf.b === sd.b;
+        const seen = typeof h.price === 'number' ? `<p class="muted small">On other dates we saw about ${eur(h.price)} a night${h.priceNote ? ' (' + esc(h.priceNote) + ')' : ''} — not a price for our nights.</p>` : '';
+        if (PRINT) return `<div class="mode-price">${real ? eur(cf.total) + ' <small>real total for our stay</small>' : typeof p === 'number' ? '~' + eur(p) + ' <small>per night, other dates</small>' : '–'}</div>`;
+        if (!sd) return seen + `<label class="field">Price per night €<input type="number" min="0" step="1" data-hprice="${esc(h.id)}" data-hk="${k}" value="${typeof hprice[h.id] === 'number' ? hprice[h.id] : ''}" placeholder="not on our route"></label>`;
+        return seen + `<label class="field"><b>Total on Booking for our stay</b> — ${sd.n} nights, ${fmtD(nightsBetween(d0, sd.a))} → ${fmtD(nightsBetween(d0, sd.b))} (€)<input type="number" min="0" step="1" data-hstay="${esc(h.id)}" data-hk="${k}" class="${real ? 'set' : ''}" value="${real ? cf.total : ''}" placeholder="e.g. ${typeof h.price === 'number' ? Math.round(h.price * sd.n) : 900}"></label><p class="small pern">${real ? '<span class="status good">✓ real price · ' + eur(cf.total / sd.n) + ' a night</span>' : '<span class="status warn">estimate until we type the Booking total</span>'}</p>`; })()}
       <p class="small"><a href="${esc(bookingUrl(h.name, k))}" target="_blank" rel="noopener">Check the live price for our dates on Booking.com ↗</a>${h.url ? ` · <a href="${esc(h.url)}" target="_blank" rel="noopener">our link ↗</a>` : ''}</p>
-      ${on && typeof p !== 'number' ? '<p><span class="status warn">▲ No price yet — we use the typical price until you type one above.</span></p>' : ''}
       ${srcLinks(h.src)}${PRINT ? '' : `<div class="det-actions"><button class="btn small ${on ? 'primary' : ''}" data-usehotel="${k}" data-hid="${esc(h.id)}">${on ? '✓ Chosen for ' + esc(T.places[k].short) : 'Choose for ' + esc(T.places[k].short)}</button>${h.mine ? `<button class="btn small" data-myhdel="${esc(h.id)}">Delete</button>` : ''}</div>`}</div>`;
   }
   function hotelsMini(places) {
@@ -317,13 +329,13 @@
     const hotelCost = k => r.lines.hotel.filter(l => l.label.startsWith(T.places[k].name)).reduce((a, l) => a + l.amt, 0);
     $('#hotel-sum').innerHTML = `<div class="card"><h3>Hotels for our route</h3>
       <p class="muted small">Our route: <b>${esc(planName())}</b> · <a href="#routes" data-go="routes">change route</a></p>
-      <table class="mini sumtbl"><thead><tr><th>Stop</th><th>Hotel</th><th class="num">Per night</th><th class="num">Total</th></tr></thead><tbody>
+      <table class="mini sumtbl"><thead><tr><th>Stop</th><th>Hotel</th><th class="num">Per night</th><th class="num">Total</th><th>How real?</th></tr></thead><tbody>
       ${Object.keys(nights).map(k => `<tr><td>${T.places[k].emoji} <b>${esc(T.places[k].short)}</b><br><small class="muted">${nights[k]} night${nights[k] > 1 ? 's' : ''}</small></td>
         <td><select data-hsel="${k}" aria-label="Hotel in ${esc(T.places[k].short)}"><option value="">No hotel chosen — typical ${esc(HOTEL_LVLS[cfg.hotelLvl])} price</option>${hotelsFor(k).map(h => `<option value="${esc(h.id)}" ${hsel[k] === h.id ? 'selected' : ''} >${esc(h.name)}${typeof hPrice(h) === 'number' ? ' · ' + eur(hPrice(h)) : ' · no price yet, typical price used'}</option>`).join('')}</select></td>
-        <td class="num">${eur(pr('hotel:' + k, T.places[k].hotel[cfg.hotelLvl]))}</td><td class="num"><b>${eur(hotelCost(k))}</b></td></tr>`).join('')}
-      <tr><td colspan="3"><b>All hotels</b></td><td class="num"><b>${eur(r.cats.hotel)}</b></td></tr>
-      <tr><td colspan="3"><b>Whole trip for two</b> ${budgetBadge(r.total)}</td><td class="num"><b>${eur(r.total)}</b></td></tr></tbody></table>
-      <p class="muted small">A chosen hotel is used for that place in every route, the comparison and the calculator. Its price counts for every night; without a chosen hotel we use the typical price plus the New-Year surcharge up to 2 Jan.</p></div>`;
+        <td class="num">${eur(hotelCost(k) / nights[k])}</td><td class="num"><b>${eur(hotelCost(k))}</b></td><td>${r.lines.hotel.some(l => l.label.startsWith(T.places[k].name) && l.note.startsWith('★ Real')) ? '<span class="status good">✓ real price</span>' : '<span class="status warn">estimate</span>'}</td></tr>`).join('')}
+      <tr><td colspan="3"><b>All hotels</b></td><td class="num"><b>${eur(r.cats.hotel)}</b></td><td></td></tr>
+      <tr><td colspan="3"><b>Whole trip for two</b> ${budgetBadge(r.total)}</td><td class="num"><b>${eur(r.total)}</b></td><td></td></tr></tbody></table>
+      <p class="muted small">Hotel prices change a lot from night to night, so an estimate can be far off. To make a stop real: open the hotel on Booking with the link on its card, copy the total for the stay, and type it into the card. Until then we use an estimate with a New-Year multiplier.</p></div>`;
   }
   function renderHotels() {
     const pk = Object.keys(T.places);
@@ -356,7 +368,7 @@
     return [
       { k: 'flights', n: 1, t: 'Flight', v: (own ? 'Our own price' : f.airline) + ' · ' + eur(own ? ov.flightown : pr('flight:' + f.id, f.pp.typ)) + ' each', ok: !!picked.f, hint: picked.f ? '' : 'suggested — tap to choose' },
       { k: 'routes', n: 2, t: 'Route', v: planName(), ok: !!picked.r, hint: picked.r ? '' : 'suggested — tap to choose' },
-      { k: 'hotels', n: 3, t: 'Hotels', v: nh ? pl.map(k => hsel[k] && findHotel(k, hsel[k]) ? findHotel(k, hsel[k]).name : T.places[k].short + ': typical price').join(' · ') : 'typical prices for now', ok: nh === pl.length, hint: nh === pl.length ? '' : nh + ' of ' + pl.length + ' chosen' },
+      { k: 'hotels', n: 3, t: 'Hotels', v: nh ? pl.map(k => hsel[k] && findHotel(k, hsel[k]) ? findHotel(k, hsel[k]).name : T.places[k].short + ': typical price').join(' · ') : 'typical prices for now', ok: nh === pl.length, hint: (() => { const m = compute(calc).m; return nh < pl.length ? nh + ' of ' + pl.length + ' chosen' : m.hConf < m.hStops ? m.hConf + ' of ' + m.hStops + ' real prices' : ''; })() },
       { k: 'calc', n: 4, t: 'Final price', v: eur(compute(calc).total) + ' for two', ok: true, hint: '' }
     ];
   }
@@ -374,6 +386,7 @@
         <p class="lede">${esc(T.meta.lede)}</p>
         <div class="hero-cta"><button class="btn primary" data-go="flights">1 · Choose the flight</button><button class="btn" data-go="routes">2 · Choose the route</button><button class="btn" data-go="hotels">3 · Choose hotels</button></div></div>
         <div class="hero-card"><small>Our trip so far</small><div class="big">${eur(mineR.total)}</div><div>${eur(mineR.total / 2)} each · ${budgetBadge(mineR.total)}</div>
+        <p class="small">${mineR.m.flightReal && mineR.m.hConf === mineR.m.hStops ? '<span class="status good">✓ flight and hotels are real prices</span>' : `<span class="status warn">still an estimate: ${mineR.m.flightReal ? '' : 'flight'}${!mineR.m.flightReal && mineR.m.hConf < mineR.m.hStops ? ' and ' : ''}${mineR.m.hConf < mineR.m.hStops ? (mineR.m.hStops - mineR.m.hConf) + ' hotel stop' + (mineR.m.hStops - mineR.m.hConf > 1 ? 's' : '') : ''} not checked</span>`}</p>
         <ol class="steps">${flowState().map(x => `<li class="${x.ok ? 'ok' : ''}"><a href="#${x.k}" data-go="${x.k}"><span class="fl-n">${x.ok && x.k !== 'calc' ? '✓' : x.n}</span><span><b>${x.t}</b> ${x.hint ? `<em>${esc(x.hint)}</em>` : ''}<small>${esc(x.v)}</small></span></a></li>`).join('')}</ol>
         ${calc.base !== T.meta.recommended ? `<p class="muted small">Our suggestion would be route ${esc(rec.s.id)} (${esc(routeTitle(rec.s))}) at ${eur(rec.r.total)}.</p>` : `<p class="muted small">${esc(T.meta.recWhy)}</p>`}</div></div>
       ${T.mustDo ? `<a class="mustbar" href="#prep" data-go="prep"><b>⚠️ Important preparation:</b> ${T.mustDo.length} things we must do before flying — visas, vaccinations, insurance. ${(() => { const dn = store.get('todo', {}); const n = T.mustDo.filter((x, i) => dn['must' + i]).length; return n + ' of ' + T.mustDo.length + ' done'; })()} →</a>` : ''}
@@ -536,6 +549,7 @@
       <div class="gauge" data-tip="${esc(eur(res.total) + ' of ' + eur(b) + ' ceiling')}" tabindex="0"><div class="gauge-band" style="left:${a / max * 100}%;width:${(b - a) / max * 100}%"></div><div class="stack" style="width:${res.total / max * 100}%">${CATS.filter(c => res.cats[c.k] > 0).map(c => `<span style="flex:${res.cats[c.k]};background:${c.c}" data-tip="${esc(c.n + ': ' + eur(res.cats[c.k]))}"></span>`).join('')}</div><span class="ref" style="left:${b / max * 100}%"></span></div>
       <div class="gauge-lbl"><span>${eur(a)}–${eur(b)} budget shaded</span><span>${res.total <= b ? eur(b - res.total) + ' left' : eur(res.total - b) + ' over'}</span></div>
       <div class="minitiles"><span>🏖 <b>${res.m.beachNights}</b> beach nights</span><span>🧳 <b>${res.m.moves}</b> check-ins</span><span>🕑 <b>${hrs(res.m.transitH)}</b> in transit</span><span>😌 hassle <b>${res.m.hassle}</b></span></div>
+      <div class="real"><b>How real is this price?</b> ${res.m.flightReal ? '<span class="status good">✓ flight: price typed by us</span>' : '<span class="status warn">flight: estimate</span>'} ${res.m.hConf === res.m.hStops ? '<span class="status good">✓ hotels: real Booking totals</span>' : `<span class="status warn">hotels: ${res.m.hConf} of ${res.m.hStops} stops with a real price</span>`} <span class="status info">food, taxis, activities: our estimates</span></div>
       ${saversHTML()}
       <div class="head"><h3>Breakdown</h3>${toggle('calcres', 'Numbers')}</div>
       ${showD('calcres') ? linesHTML(res) : catBars(res)}
@@ -674,6 +688,7 @@
     if (d.date) return setDates(d.date === 'd0' ? t.value : d0, d.date === 'd1' ? t.value : (d.date === 'd0' && nightsBetween(t.value, d1) < 3 ? isoAdd(t.value, tripN) : d1));
     if (d.cmp) { compareSel = t.checked ? compareSel.concat(d.cmp) : compareSel.filter(x => x !== d.cmp); store.set('cmp', compareSel); return renderCompare(); }
     if (d.todo) { const o = store.get('todo', {}); o[d.todo] = t.checked; return store.set('todo', o); }
+    if (d.hstay) return renderHotels();
     if (d.hsel) { if (t.value) hsel[d.hsel] = t.value; else delete hsel[d.hsel]; syncHotel(d.hsel); return renderHotels(); }
     if (d.stop !== undefined) { calc.stops[+d.stop].place = t.value; custom(); saveCalc(); return renderCalc(); }
     if (t.id === 'c-flight') { mark('f'); gf = t.value; store.set('gf', gf); delete ov.flightown; store.set('ov', ov); if (calc.undo) delete calc.undo.flight; saveCalc(); return renderCalc(); }
@@ -687,6 +702,11 @@
     const t = e.target, d = t.dataset;
     if (t.id === 'c-shop') { calc.shopping = +t.value; $('#o-shop').textContent = eur(calc.shopping); }
     else if (t.id === 'c-res') { calc.reservePct = +t.value; $('#o-res').textContent = calc.reservePct + '%'; }
+    else if (d.hstay) { const k = d.hk, sd = stayDates(k), v = +t.value; if (!sd) return;
+      if (t.value === '' || isNaN(v) || v < 0) { delete hconf[d.hstay]; delete hprice[d.hstay]; } else { hconf[d.hstay] = { a: sd.a, b: sd.b, n: sd.n, total: v }; hprice[d.hstay] = Math.round(v / sd.n); hsel[k] = d.hstay; }
+      store.set('hconf', hconf); store.set('hprice', hprice); syncHotel(k); t.classList.toggle('set', !!hconf[d.hstay]);
+      const pn = t.closest('.hotel').querySelector('.pern'); if (pn) pn.innerHTML = hconf[d.hstay] ? '<span class="status good">✓ real price · ' + eur(v / sd.n) + ' a night</span>' : '<span class="status warn">estimate until we type the Booking total</span>';
+      return renderHotelSum(); }
     else if (d.hprice) { if (t.value === '' || isNaN(+t.value) || +t.value < 0) delete hprice[d.hprice]; else hprice[d.hprice] = +t.value; store.set('hprice', hprice); t.classList.toggle('set', d.hprice in hprice); if (hsel[d.hk] === d.hprice) syncHotel(d.hk); return renderHotelSum(); }
     else if (d.ov) { if (d.ov === 'flightown') mark('f'); if (t.value === '' || isNaN(+t.value) || +t.value < 0) delete ov[d.ov]; else ov[d.ov] = +t.value; store.set('ov', ov); if (d.ov.startsWith('hotel:')) { delete hsel[d.ov.slice(6)]; store.set('hsel', hsel); } t.classList.toggle('set', d.ov in ov); if (tab === 'flights') { const fs = $('#flight-sum'), v = t.value; fs.innerHTML = flightSum(); const n = fs.querySelector('[data-ov]'); if (n) { n.focus(); n.value = ''; n.value = v; } $$('.frow').forEach(r => r.classList.toggle('on', !has('flightown') && r.querySelector('[data-pickflight]').dataset.pickflight === gf)); return; } if (tab === 'mine') return renderMineSummary(); }
     else if (t.id === 'tip-q') { views.tipQ = t.value; return renderTips(); }

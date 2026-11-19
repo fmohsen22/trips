@@ -229,3 +229,5 @@ input[type=text],input[type=url]{font:inherit;color:var(--ink);background:var(--
 .tripsw{width:auto;max-width:150px;border-radius:999px;padding:6px 10px;font-size:.85rem}
 .top{flex-wrap:wrap}.brand{min-width:0;flex:1 1 220px}.brand b{overflow-wrap:anywhere}
 @media(max-width:520px){.tripsw{max-width:120px}}
+
+.real{font-size:.85rem;margin:10px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.hotel input[data-hstay]{display:block;width:100%;margin-top:4px}
