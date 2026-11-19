@@ -12,7 +12,9 @@ Everything — prices, flights, routes, tips, sources — lives in `vietnam/data
 | What | Where in `data.js` |
 |---|---|
 | Hotel / food / taxi rates per place | `places` |
-| Flights from Vienna (per person, return) | `flights` |
+| Flights from Vienna (per person, return); default flight is `meta.bestFlight` | `flights` |
+| Must-do preparation (orange box) | `mustDo` |
+| Hotels with reviews | `hotels` |
 | Journeys inside Vietnam | `legs` |
 | Activities, visa, insurance | `activities`, `fixed` |
 | The routes themselves | `scenarios` |
