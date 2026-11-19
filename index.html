@@ -1,14 +1,36 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Our trips</title><meta name="robots" content="noindex">
+<title>Sophie &amp; Mohsey — our trips</title><meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧳</text></svg>">
+<link rel="stylesheet" href="shared/styles.css">
 <style>
-:root{color-scheme:light dark}
-body{margin:0;min-height:100dvh;display:grid;place-items:center;font:17px/1.5 system-ui,sans-serif;background:#f7f6f1;color:#0b0b0b;padding:16px}
-@media(prefers-color-scheme:dark){body{background:#0d0d0d;color:#f0efec}a.card{background:#1a1a19!important;border-color:#2c2c2a!important}}
-main{max-width:520px;width:100%}h1{margin:0 0 16px}
-a.card{display:block;text-decoration:none;color:inherit;background:#fcfcfb;border:1px solid #e1e0d9;border-radius:18px;padding:22px}
-a.card:hover{border-color:#0f7c72}a.card b{font-size:1.3rem}a.card span{display:block;opacity:.7}
+.wrap{max-width:980px;margin:0 auto;padding:24px 16px 60px}.hello{background:linear-gradient(135deg,var(--hero1),var(--hero2));color:#fff;border-radius:24px;padding:28px;margin-bottom:22px}
+.hello h1{font-size:clamp(1.8rem,5vw,2.8rem);margin:0 0 .2em}.hello p{color:#e3f1ee;margin:0;max-width:60ch}
+.tripcard{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--ink)}.tripcard:hover{border-color:var(--accent)}
+.tripcard .em{font-size:2.4rem;line-height:1}.tripcard h2{margin:0;font-size:1.3rem}.tripcard .tot{font-size:1.7rem;font-weight:800;margin-top:6px}.tripcard .go{margin-top:auto;color:var(--accent);font-weight:700}
 </style></head>
-<body><main><h1>Our trips</h1>
-<a class="card" href="vietnam/"><b>🌴 Sophie &amp; Mohsey in Vietnam</b><span>28 Dec 2026 – 15 Jan 2027 · routes, prices, calculator</span></a>
-</main></body></html>
+<body><div class="wrap">
+<div class="hello"><h1>Sophie &amp; Mohsey — our trips 🧳</h1><p>Every trip we are planning or have done. Open one to choose the flight, the route and the hotels and see the final price. The numbers below are what we have chosen so far.</p></div>
+<div class="grid3" id="trips"></div>
+<h2>Side by side</h2>
+<div class="tablewrap"><table class="tbl"><thead><tr><th>Trip</th><th>Dates</th><th>Chosen route</th><th>Flight</th><th>Nights</th><th>Total for two</th><th>Per night</th></tr></thead><tbody id="cmp"></tbody></table></div>
+<p class="muted small">Totals appear after a trip has been opened once on this device (or once shared saving is switched on and a choice has been made). They are planning estimates, not quotes.</p>
+</div>
+<script src="trips.js"></script>
+<script>
+(function(){
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var eur=function(n){return '€'+Math.round(n).toLocaleString('en-US')};
+  var th=null;try{th=JSON.parse(localStorage.getItem('smv.theme'))}catch(e){} if(th)document.documentElement.dataset.theme=th;
+  var ST={idea:['info','idea'],planning:['warn','planning'],booked:['good','booked'],done:['good','done ✓']};
+  var sum=function(k){try{return JSON.parse(localStorage.getItem('trips.summary.'+k))}catch(e){return null}};
+  var T=window.TRIPS||[];
+  document.getElementById('trips').innerHTML=T.map(function(t){var s=sum(t.key),st=ST[t.status]||ST.idea;
+    return '<a class="card tripcard" href="'+esc(t.key)+'/"><div class="tip-top"><span class="em">'+t.emoji+'</span><span class="status '+st[0]+'">'+st[1]+'</span></div><h2>'+esc(t.country)+'</h2><p class="muted">'+esc(t.dates)+'<br>'+esc(t.blurb)+'</p>'+
+      (s?'<div class="tot">'+eur(s.total)+' <small class="muted" style="font-size:.8rem;font-weight:500">for two</small></div><p class="muted small">'+esc(s.route)+' · '+esc(s.flight)+'</p>':'<p class="muted small">Not opened yet — tap to start planning.</p>')+'<span class="go">Open trip →</span></a>'}).join('');
+  var fmt=function(iso){return new Date(iso+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})};
+  document.getElementById('cmp').innerHTML=T.map(function(t){var s=sum(t.key);
+    return '<tr><td>'+t.emoji+' <b><a href="'+esc(t.key)+'/">'+esc(t.country)+'</a></b></td>'+(s?'<td>'+fmt(s.d0)+' – '+fmt(s.d1)+'</td><td>'+esc(s.route)+'</td><td>'+esc(s.flight)+'</td><td>'+s.nights+'</td><td><b>'+eur(s.total)+'</b></td><td>'+eur(s.total/s.nights)+'</td>':'<td>'+esc(t.dates)+'</td><td colspan="5" class="muted">open the trip once to see its numbers</td>')+'</tr>'}).join('');
+})();
+</script>
+</body></html>

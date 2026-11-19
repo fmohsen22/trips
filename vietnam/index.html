@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sophie &amp; Mohsey in Vietnam</title>
-<meta name="description" content="Our Vietnam trip planner: routes, verified prices, flights, transport and a live budget calculator.">
+<title>Our trip</title>
+<meta name="description" content="Our trip planner: routes, prices, flights, hotels and a live budget calculator.">
 <meta name="robots" content="noindex">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>">
-<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧳</text></svg>">
+<link rel="stylesheet" href="../shared/styles.css">
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo">🌴</span><div><b>Sophie &amp; Mohsey in Vietnam</b><small>prices checked <span id="updated"></span> · <span id="sync" class="sync off">💾 Saved on this device only</span></small></div></div>
-  <div class="top-actions"><button class="btn small" id="print" title="Open the PDF report">⬇ PDF</button><button class="btn small" id="theme" title="Light / dark">◐</button></div>
+  <div class="brand"><a class="home" href="../" title="All our trips">←</a><span class="logo" id="logo">🧳</span><div><b id="brand">Our trip</b><small>prices checked <span id="updated"></span> · <span id="sync" class="sync off">💾 Saved on this device only</span></small></div></div>
+  <div class="top-actions"><select id="tripsw" class="tripsw" aria-label="Switch trip"></select><button class="btn small" id="print" title="Open the PDF report">⬇ PDF</button><button class="btn small" id="theme" title="Light / dark">◐</button></div>
 </header>
 <nav class="tabs" aria-label="Sections">
   <button data-go="overview">Overview</button>
@@ -38,10 +38,11 @@
   <section class="tabpane" id="tips" hidden></section>
   <section class="tabpane" id="prep" hidden></section>
 </main>
-<footer>Planning estimates for two travellers, not bookable quotes. Made with ♥ for Sophie &amp; Mohsey.</footer>
+<footer>Planning estimates for two travellers, not bookable quotes. Made with ♥ for Sophie &amp; Mohsey. · <a href="../">All our trips</a></footer>
 <dialog id="dlg"><div id="dlg-body"></div></dialog>
 <div id="tip" role="tooltip" hidden></div>
+<script src="../trips.js"></script>
 <script src="data.js"></script>
-<script src="app.js"></script>
+<script src="../shared/app.js"></script>
 </body>
 </html>

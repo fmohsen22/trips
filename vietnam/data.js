@@ -80,6 +80,9 @@
 
   window.TRIP = {
     meta: {
+      key: 'vietnam', title: 'Sophie & Mohsey in Vietnam', heroTitle: 'Sophie & Mohsey\nin Vietnam', country: 'Vietnam', emoji: '🌴', status: 'planning',
+      home: 'Vienna', homeAirport: 'VIE', hub: 'hcmc', hubAirport: 'SGN', d0: '2026-12-29', d1: '2027-01-15',
+      skipActs: ['cablecar', 'vinwonders', 'show', 'scuba', 'speedboat', 'parasail', 'halong', 'bana', 'tailor'], galaPlace: 'pq',
       updatedHuman: '19 Nov 2026', eurVnd: 28500, budgetMin: 4000, budgetMax: 5000,
       peak: { from: '2026-12-23', to: '2027-01-02' }, bestFlight: 'eva-sgn', openJaw: { hanoi: 160, hoian: 210 }, shopping: 150, reservePct: 5, visaDefault: true, recommended: 'C',
       lede: 'Seventeen nights of sun, sea and street food. Here is every route we could take, what each one costs, and a calculator to shape our own.',

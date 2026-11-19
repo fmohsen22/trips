@@ -1,7 +1,8 @@
 /* Sophie & Mohsey in Vietnam — app logic. All prices live in data.js. */
 (function () {
   'use strict';
-  const T = window.TRIP;
+  const T = window.TRIP, M = T.meta, HUB = M.hub;
+  const PFX = M.key === 'vietnam' ? 'smv.' : 'trip.' + M.key + '.';
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -25,8 +26,8 @@
   const FOOD_LVLS = { local: 'Street food only', mixed: 'Mostly local', tourist: 'Restaurants & resort' };
 
   /* ---------- dates ---------- */
-  const DEF0 = '2026-12-29', DEF1 = '2027-01-15', isoOk = x => /^\d{4}-\d{2}-\d{2}$/.test(x || '') && !isNaN(Date.parse(x));
-  const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem('smv.' + k)); return isoOk(v) ? v : d; } catch (e) { return d; } };
+  const DEF0 = M.d0, DEF1 = M.d1, isoOk = x => /^\d{4}-\d{2}-\d{2}$/.test(x || '') && !isNaN(Date.parse(x));
+  const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem(PFX + k)); return isoOk(v) ? v : d; } catch (e) { return d; } };
   let d0 = lsGet('d0', DEF0), d1 = lsGet('d1', DEF1);
   const nightsBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
   if (nightsBetween(d0, d1) < 3 || nightsBetween(d0, d1) > 30) { d0 = DEF0; d1 = DEF1; }
@@ -37,19 +38,19 @@
 
   /* ---------- own prices (overrides) ---------- */
   const store = {
-    get(k, d) { try { const v = localStorage.getItem('smv.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem('smv.' + k, JSON.stringify(v)); if (SYNC_KEYS.includes(k)) { localStorage.setItem('smv.ts', String(Date.now())); schedulePush(); } } catch (e) { } }
+    get(k, d) { try { const v = localStorage.getItem(PFX + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(PFX + k, JSON.stringify(v)); if (SYNC_KEYS.includes(k)) { localStorage.setItem('smv.ts', String(Date.now())); schedulePush(); } } catch (e) { } }
   };
   /* ---------- shared state (both travellers see the same choices) ---------- */
   const SYNC_KEYS = ['calc', 'ov', 'hsel', 'hprice', 'myh', 'gf', 'd0', 'd1', 'picked', 'todo'];
-  const API = '/api/state?trip=vietnam';
+  const API = '/api/state?trip=' + encodeURIComponent(M.key);
   let syncOn = false, pushT = null;
   const localTs = () => { try { return +localStorage.getItem('smv.ts') || 0; } catch (e) { return 0; } };
   const syncStatus = (txt, cls) => { const el = document.getElementById('sync'); if (el) { el.textContent = txt; el.className = 'sync ' + cls; } };
   function schedulePush() { if (!syncOn) return; clearTimeout(pushT); syncStatus('☁ saving…', 'busy'); pushT = setTimeout(push, 900); }
   async function push() {
     pushT = null; const data = {};
-    try { SYNC_KEYS.forEach(k => { const v = localStorage.getItem('smv.' + k); if (v != null) data[k] = v; }); } catch (e) { return; }
+    try { SYNC_KEYS.forEach(k => { const v = localStorage.getItem(PFX + k); if (v != null) data[k] = v; }); } catch (e) { return; }
     try { const r = await fetch(API, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ts: localTs(), data }) }); if (!r.ok) throw 0; syncStatus('☁ Shared · saved for both of you', 'on'); }
     catch (e) { syncStatus('⚠ Could not save online — kept on this device', 'off'); }
   }
@@ -61,7 +62,7 @@
       if (j && typeof j.ts === 'number' && j.data && j.ts > lts) {
         if (pushT) return; const a = document.activeElement;
         if (!first && a && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) return;
-        SYNC_KEYS.forEach(k => { if (typeof j.data[k] === 'string') localStorage.setItem('smv.' + k, j.data[k]); else localStorage.removeItem('smv.' + k); });
+        SYNC_KEYS.forEach(k => { if (typeof j.data[k] === 'string') localStorage.setItem(PFX + k, j.data[k]); else localStorage.removeItem(PFX + k); });
         localStorage.setItem('smv.ts', String(j.ts)); location.reload(); return;
       }
       if (lts && (!j || lts > j.ts)) push(); else syncStatus('☁ Shared · both of you see the same choices', 'on');
@@ -101,15 +102,15 @@
     const P = T.places;
     const f0 = T.flights.find(x => x.id === (flightOverride || gf)) || T.flights[0];
     const level = lvlOverride || 'typ';
-    const own = has('flightown') && !flightOverride, dep = cfg.openJaw && T.places[cfg.openJaw] ? cfg.openJaw : 'hcmc';
-    const ojx = dep !== 'hcmc' ? (T.meta.openJaw[dep] || 0) : 0;
-    const f = Object.assign({}, f0, { arr: 'hcmc', dep }, own ? { airline: 'Our own flight price' } : {});
+    const own = has('flightown') && !flightOverride, dep = cfg.openJaw && T.places[cfg.openJaw] ? cfg.openJaw : HUB;
+    const ojx = dep !== HUB ? (T.meta.openJaw[dep] || 0) : 0;
+    const f = Object.assign({}, f0, { arr: HUB, dep }, own ? { airline: 'Our own flight price' } : {});
     const lines = {}; CATS.forEach(c => lines[c.k] = []);
     const add = (k, label, amt, note, src) => lines[k].push({ label, amt, note, src });
 
     const fk = 'flight:' + f0.id, base = own ? ov.flightown : pr(fk, f0.pp[level]), pp = base + ojx;
-    add('intl', own ? 'Our own flight price' : `${f0.airline} · Vienna ⇄ Saigon`, pp * 2,
-      `${eur(base)} per person return × 2 — ${own ? '★ the price you typed in' : has(fk) ? '★ your own price' : LEVELS[level].toLowerCase() + ' estimate'}.${ojx ? ` Plus about ${eur(ojx)} each for flying home from ${T.places[dep].short} instead of Saigon (estimate).` : ''} ${own ? '' : (f0.bag || '') + ' ' + (f0.note || '')}`, f0.src);
+    add('intl', own ? 'Our own flight price' : `${f0.airline} · ${M.home} ⇄ ${T.places[HUB].short}`, pp * 2,
+      `${eur(base)} per person return × 2 — ${own ? '★ the price you typed in' : has(fk) ? '★ your own price' : LEVELS[level].toLowerCase() + ' estimate'}.${ojx ? ` Plus about ${eur(ojx)} each for flying home from ${T.places[dep].short} instead of ${T.places[HUB].short} (estimate).` : ''} ${own ? '' : (f0.bag || '') + ' ' + (f0.note || '')}`, f0.src);
 
     const stops = cfg.stops.filter(s => s.nights > 0);
     let night = 0; const timeline = [];
@@ -142,7 +143,7 @@
 
     const here = new Set(stops.map(s => s.place));
     T.activities.forEach(a => { if (cfg.acts.includes(a.id) && here.has(a.place)) add('acts', a.name, pr('act:' + a.id, a.for2), (a.note || '') + mine('act:' + a.id), a.src); });
-    if (cfg.gala && here.has('pq')) add('acts', T.fixed.gala.label, pr('fixed:gala', T.fixed.gala.for2), T.fixed.gala.note + mine('fixed:gala'), T.fixed.gala.src);
+    if (cfg.gala && M.galaPlace && here.has(M.galaPlace)) add('acts', T.fixed.gala.label, pr('fixed:gala', T.fixed.gala.for2), T.fixed.gala.note + mine('fixed:gala'), T.fixed.gala.src);
     add('shop', 'Souvenirs, clothes, gifts', cfg.shopping, 'Your own allowance — entirely optional.');
     ['visa', 'insurance', 'sim'].forEach(k => { if (cfg[k]) add('fixed', T.fixed[k].label, pr('fixed:' + k, T.fixed[k].for2), (T.fixed[k].note || '') + mine('fixed:' + k), T.fixed[k].src); });
 
@@ -241,24 +242,24 @@
       <div class="tile"><small>Total for two</small><b>${eur(res.total)}</b>${budgetBadge(res.total)}</div>
       <div class="tile"><small>Beach nights</small><b>${m.beachNights}<span> / ${m.nights}</span></b></div>
       <div class="tile"><small>Hotel check-ins</small><b>${m.moves}</b></div>
-      <div class="tile"><small>Travel inside Vietnam</small><b>${hrs(m.transitH)}</b></div>
-      <div class="tile"><small>Flights Vienna ⇄ Vietnam</small><b>${hrs(m.intlH)}</b><span class="muted">both ways, ${esc(res.flight.airline)}</span></div>
+      <div class="tile"><small>Travel inside the country</small><b>${hrs(m.transitH)}</b></div>
+      <div class="tile"><small>Long-haul flights</small><b>${hrs(m.intlH)}</b><span class="muted">both ways, ${esc(res.flight.airline)}</span></div>
       <div class="tile"><small>Hassle score</small><b>${m.hassle}</b><span class="muted">lower = more relaxed</span></div></div>`;
   }
 
   /* ---------- ways to save ---------- */
-  const SKIP_ACTS = ['cablecar', 'vinwonders', 'show', 'scuba', 'speedboat', 'parasail', 'halong', 'bana', 'tailor'];
+  const SKIP_ACTS = M.skipActs || [];
   const cheapestFlight = () => T.flights.filter(x => !x.avoid).sort((a, b) => pr('flight:' + a.id, a.pp.typ) - pr('flight:' + b.id, b.pp.typ))[0];
   const SAVERS = [
     { id: 'flight', icon: '✈️', global: true, keys: [], t: () => 'Fly with ' + cheapestFlight().airline, d: 'The cheapest airline in our list — an estimate with longer layovers, so get a real quote first. Changes the flight for every route.', apply: () => { } },
     { id: 'hotel', icon: '🏨', keys: ['hotelLvl'], t: () => 'Simple, well-reviewed 3★ hotels', d: 'Clean room, good location, often still a pool — just fewer frills.', apply: c => { c.hotelLvl = 'budget'; } },
-    { id: 'food', icon: '🍜', keys: ['foodLvl'], t: () => 'Street food for most meals', d: 'Pho, banh mi and market stalls are the best food in Vietnam anyway; keep a couple of nice dinners.', apply: c => { c.foodLvl = 'local'; } },
+    { id: 'food', icon: '🍜', keys: ['foodLvl'], t: () => 'Street food for most meals', d: 'Street stalls and small family places are often the best food anyway; keep a couple of nice dinners.', apply: c => { c.foodLvl = 'local'; } },
     { id: 'gala', icon: '🥂', keys: ['gala'], t: () => 'Pick a hotel without a New-Year gala fee', d: 'Small hotels rarely charge one. Ask before booking.', apply: c => { c.gala = false; } },
-    { id: 'peak', icon: '🎆', keys: ['stops'], t: () => 'Spend New Year in Saigon, beach afterwards', d: 'Moves your city nights to the start so the island nights fall after the 29 Dec – 2 Jan surcharge.', apply: c => { const city = c.stops.filter(x => !T.places[x.place].beach), beach = c.stops.filter(x => T.places[x.place].beach); if (!city.length || !beach.length) return; const hc = city.filter(x => x.place === 'hcmc'); if (!c.openJaw && hc.length && hc.reduce((n, x) => n + x.nights, 0) > 1) { const tot = city.reduce((a, x) => { const e = a.find(y => y.place === x.place); e ? e.nights += x.nights : a.push({ place: x.place, nights: x.nights }); return a; }, []); const h = tot.find(x => x.place === 'hcmc'); h.nights -= 1; c.stops = [...tot.filter(x => x.nights > 0), ...beach, { place: 'hcmc', nights: 1 }]; } else c.stops = [...city, ...beach]; } },
+    { id: 'peak', icon: '🎆', keys: ['stops'], t: () => 'Spend New Year in the city, beach afterwards', d: 'Moves your city nights to the start so the beach nights fall after the New-Year surcharge.', apply: c => { const city = c.stops.filter(x => !T.places[x.place].beach), beach = c.stops.filter(x => T.places[x.place].beach); if (!city.length || !beach.length) return; const hc = city.filter(x => x.place === HUB); if (!c.openJaw && hc.length && hc.reduce((n, x) => n + x.nights, 0) > 1) { const tot = city.reduce((a, x) => { const e = a.find(y => y.place === x.place); e ? e.nights += x.nights : a.push({ place: x.place, nights: x.nights }); return a; }, []); const h = tot.find(x => x.place === HUB); h.nights -= 1; c.stops = [...tot.filter(x => x.nights > 0), ...beach, { place: HUB, nights: 1 }]; } else c.stops = [...city, ...beach]; } },
     { id: 'legs', icon: '🚌', risky: true, keys: ['legMode'], t: () => 'Travel the cheapest way between places', d: 'Bus and ferry instead of flights and private cars. Much slower, and ferries can be cancelled in rough seas.', apply: c => { compute(c).legs.forEach(l => { const k = legKey(l.a, l.b); c.legMode[k] = [...l.opts].sort((a, b) => pr('leg:' + k + ':' + a.id, a.pp) - pr('leg:' + k + ':' + b.id, b.pp))[0].id; }); } },
-    { id: 'acts', icon: '🎟', keys: ['acts'], t: () => 'Skip the pricey attractions', d: 'Drop cable car, theme park, shows, scuba and speedboat; keep the snorkel trip, massages and food tour.', apply: c => { c.acts = c.acts.filter(a => !SKIP_ACTS.includes(a)); } },
+    { id: 'acts', icon: '🎟', keys: ['acts'], t: () => 'Skip the pricey attractions', d: 'Drop the most expensive optional outings and keep the simple ones.', apply: c => { c.acts = c.acts.filter(a => !SKIP_ACTS.includes(a)); } },
     { id: 'shop', icon: '🛍', keys: ['shopping'], t: () => 'Shopping allowance down to €50', d: 'Souvenirs are cheap; bargain from about half the first price.', apply: c => { c.shopping = Math.min(c.shopping, 50); } },
-    { id: 'ins', icon: '🩺', keys: ['insurance'], t: () => 'Use travel insurance you already have', d: 'Many credit cards and annual policies include it — check the cover is valid for Vietnam and 19 days.', apply: c => { c.insurance = false; } },
+    { id: 'ins', icon: '🩺', keys: ['insurance'], t: () => 'Use travel insurance you already have', d: 'Many credit cards and annual policies include it — check the cover is valid for this country and the whole trip.', apply: c => { c.insurance = false; } },
     { id: 'res', icon: '🧯', keys: ['reservePct'], t: () => 'Smaller safety buffer (3%)', d: 'Only sensible once flights and hotels are booked at fixed prices.', apply: c => { c.reservePct = Math.min(c.reservePct, 3); } }
   ];
   const clone = o => JSON.parse(JSON.stringify(o));
@@ -325,7 +326,7 @@
   function renderHotels() {
     const pk = Object.keys(T.places);
     const mineP = planPlaces(); pk.sort((a, b) => (mineP.includes(b) ? 1 : 0) - (mineP.includes(a) ? 1 : 0));
-    const cur = views.hplace && pk.includes(views.hplace) ? views.hplace : (mineP.find(k => !hsel[k]) || mineP[0] || 'pq');
+    const cur = views.hplace && pk.includes(views.hplace) ? views.hplace : (mineP.find(k => !hsel[k]) || mineP[0] || HUB);
     $('#hotels').innerHTML = flowBar('hotels') + `<div class="head"><div><h2>Hotels</h2><p class="muted">Pick a hotel for each stop and see what the trip costs. Prices are what we saw on ${esc(T.meta.updatedHuman)}, not quotes for your nights — check the live price, type it in, and everything recalculates. You can add your own finds too.</p></div></div>
       ${T.hotelNote ? `<div class="note"><p>${esc(T.hotelNote)}</p></div>` : ''}
       <div id="hotel-sum"></div>
@@ -357,7 +358,7 @@
     ];
   }
   const flowBar = cur => PRINT ? '' : `<nav class="flow" aria-label="Planning steps">${flowState().map(x => `<a href="#${x.k}" data-go="${x.k}" class="${x.k === cur ? 'cur' : ''} ${x.ok ? 'ok' : ''}"><span class="fl-n">${x.ok && x.k !== 'calc' ? '✓' : x.n}</span><span class="fl-t"><b>${x.t}</b><small>${esc(x.v)}</small></span></a>`).join('')}</nav>`;
-  const tripCtl = () => PRINT ? '' : `<div class="ctl tripctl"><label>Arrive in Vietnam <input type="date" data-date="d0" value="${d0}" min="2026-11-20" max="2027-12-31"></label><label>Fly home <input type="date" data-date="d1" value="${d1}" min="2026-11-23" max="2028-01-31"></label><span class="status info">${tripN} nights</span>${d0 !== DEF0 || d1 !== DEF1 ? '<span class="muted small">Flight: leave Vienna ${fmtD(-1)}, home ${fmtD(tripN)} — <a href="#flights" data-go="flights">check the price for these dates</a>.</span> <button class="btn small" data-datereset>Reset dates</button>' : ''}</div>`;
+  const tripCtl = () => PRINT ? '' : `<div class="ctl tripctl"><label>Arrive in ${esc(M.country)} <input type="date" data-date="d0" value="${d0}" min="2026-11-20" max="2027-12-31"></label><label>Fly home <input type="date" data-date="d1" value="${d1}" min="2026-11-23" max="2028-01-31"></label><span class="status info">${tripN} nights</span>${d0 !== DEF0 || d1 !== DEF1 ? '<span class="muted small">Flight: leave ${esc(M.home)} ${fmtD(-1)}, home ${fmtD(tripN)} — <a href="#flights" data-go="flights">check the price for these dates</a>.</span> <button class="btn small" data-datereset>Reset dates</button>' : ''}</div>`;
   const routeTitle = s => { const st = scaleStops(s.stops, tripN), m = {}; st.forEach(x => m[x.place] = (m[x.place] || 0) + x.nights); return tripN === 17 ? s.title : Object.keys(m).map(k => m[k] + ' ' + T.places[k].short).join(' + '); };
 
   /* ---------- OVERVIEW ---------- */
@@ -365,8 +366,8 @@
     const all = T.scenarios.map(s => ({ s, r: compute(cfgFromScenario(s)) }));
     const rec = all.find(x => x.s.id === T.meta.recommended), mineR = compute(calc);
     $('#overview').innerHTML = `
-      <div class="hero"><div><p class="eyebrow">${fmtD(-1)} → ${fmtD(tripN)} · from Vienna · ${tripN} nights</p>
-        <h1>Sophie &amp; Mohsey<br>in Vietnam <span>🌴</span></h1>
+      <div class="hero"><div><p class="eyebrow">${fmtD(-1)} → ${fmtD(tripN)} · from ${esc(M.home)} · ${tripN} nights</p>
+        <h1>${esc(M.heroTitle).replace(/\n/g, '<br>')} <span>${M.emoji}</span></h1>
         <p class="lede">${esc(T.meta.lede)}</p>
         <div class="hero-cta"><button class="btn primary" data-go="flights">1 · Choose the flight</button><button class="btn" data-go="routes">2 · Choose the route</button><button class="btn" data-go="hotels">3 · Choose hotels</button></div></div>
         <div class="hero-card"><small>Our trip so far</small><div class="big">${eur(mineR.total)}</div><div>${eur(mineR.total / 2)} each · ${budgetBadge(mineR.total)}</div>
@@ -430,13 +431,13 @@
       <div class="controls"><div class="chips">${T.scenarios.map(s => `<label class="chip"><input type="checkbox" data-cmp="${s.id}" ${compareSel.includes(s.id) ? 'checked' : ''}>${s.id} ${esc(s.short)}</label>`).join('')}<label class="chip"><input type="checkbox" data-cmp="mine" ${compareSel.includes('mine') ? 'checked' : ''}>★ Our own plan</label></div>
       ${tripCtl()}<div class="ctl"><span>Flight prices:</span><div class="seg" id="mood">${Object.keys(LEVELS).map(l => `<button data-mood="${l}" class="${mood === l ? 'on' : ''}">${LEVELS[l]}</button>`).join('')}</div></div></div>
       ${!rows.length ? '<p class="card">Select at least one route above.</p>' : ''}
-      ${rows.length && showD('compare') ? `<div class="tablewrap"><table class="tbl cmp"><thead><tr><th>Route</th><th>Total for two</th><th>Budget</th><th>Beach nights</th><th>Hotel check-ins</th><th>Travel inside Vietnam</th><th>Hassle score</th><th>Long-haul flights</th></tr></thead><tbody>
+      ${rows.length && showD('compare') ? `<div class="tablewrap"><table class="tbl cmp"><thead><tr><th>Route</th><th>Total for two</th><th>Budget</th><th>Beach nights</th><th>Hotel check-ins</th><th>Travel inside the country</th><th>Hassle score</th><th>Long-haul flights</th></tr></thead><tbody>
         ${rows.map(x => `<tr><td><b>${esc(x.label)}</b></td>${cell(x.r.total, bT, eur(x.r.total))}<td>${budgetBadge(x.r.total)}</td>${cell(x.r.m.beachNights, bB, x.r.m.beachNights)}${cell(x.r.m.moves, bM, x.r.m.moves)}${cell(x.r.m.transitH, bH, hrs(x.r.m.transitH))}${cell(x.r.m.hassle, bS, x.r.m.hassle)}<td>${hrs(x.r.m.intlH)}<br><small>${esc(x.r.flight.airline)}</small></td></tr>`).join('')}
         </tbody></table></div><p class="muted small">Green cells = best in that column. Hassle score = one point per extra hotel move plus the difficulty of each journey (flight 1–2, bus + ferry 4, long train 4–5).</p>` : ''}
       ${rows.length && showV('compare') ? `<div class="grid2">
         <div class="card"><h3>Total cost for two</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.total })), { band: [T.meta.budgetMin, T.meta.budgetMax] })}</div>
         <div class="card"><h3>Where the money goes</h3>${stackChart(rows.map(x => ({ label: x.label, total: x.r.total, cats: x.r.cats })), { ref: T.meta.budgetMax })}</div>
-        <div class="card"><h3>Hours spent travelling inside Vietnam</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.m.transitH })), { fmt: hrs, c: 'var(--s2)' })}</div>
+        <div class="card"><h3>Hours spent travelling inside the country</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.m.transitH })), { fmt: hrs, c: 'var(--s2)' })}</div>
         <div class="card"><h3>Nights by the beach</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.m.beachNights })), { fmt: v => v + ' nights', c: 'var(--s3)', max: tripN })}</div>
         <div class="card"><h3>Hassle score (lower is more relaxed)</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.m.hassle })), { fmt: v => String(v), c: 'var(--s5)' })}</div>
         <div class="card"><h3>Cost per beach night</h3>${barChart(rows.filter(x => x.r.m.beachNights).map(x => ({ label: x.label, v: x.r.total / x.r.m.beachNights })), { c: 'var(--s7)' })}<p class="muted small">Whole trip cost divided by beach nights — a rough “value for swimmers” measure.</p></div></div>` : ''}`;
@@ -451,22 +452,22 @@
       <div class="fs-row"><div><h3>${own ? 'Our own price' : esc(f.airline)}</h3><p class="muted small">${own ? 'You typed this in — it replaces the airline price below.' : `via ${esc(f.via)} · ${hrs(f.durOut)} out, ${hrs(f.durBack)} back · ${esc(f.bag || '')}`}</p></div>
       <div class="fs-price"><b>${eur(p)}</b><small> each · ${eur(p * 2)} for two</small></div></div>
       ${PRINT ? '' : `<label class="field">Found a better price? Type it here (per person, return, with bag) and it is used everywhere<input type="number" min="0" step="10" data-ov="flightown" class="${own ? 'set' : ''}" value="${own ? ov.flightown : ''}" placeholder="e.g. 1050"></label>`}
-      <p class="fdates"><b>Our flight dates:</b> leave Vienna ${fmtD(-1)} · arrive ${fmtD(0)} · fly home ${fmtD(tripN)}${PRINT ? '' : ` · <a href="https://www.google.com/travel/flights?q=${encodeURIComponent('Flights from VIE to SGN on ' + isoAdd(d0, -1) + ' through ' + d1 + ' for 2 adults')}" target="_blank" rel="noopener">search these dates on Google Flights ↗</a>`}${d0 !== DEF0 || d1 !== DEF1 ? '<br><span class="status warn">▲ Our prices were researched for 28 Dec → 15 Jan. For your new dates, check the live price and type it in above.</span>' : ''}</p>
+      <p class="fdates"><b>Our flight dates:</b> leave ${esc(M.home)} ${fmtD(-1)} · arrive ${fmtD(0)} · fly home ${fmtD(tripN)}${PRINT ? '' : ` · <a href="https://www.google.com/travel/flights?q=${encodeURIComponent('Flights from ' + M.homeAirport + ' to ' + M.hubAirport + ' on ' + isoAdd(d0, -1) + ' through ' + d1 + ' for 2 adults')}" target="_blank" rel="noopener">search these dates on Google Flights ↗</a>`}${d0 !== DEF0 || d1 !== DEF1 ? '<br><span class="status warn">▲ Our prices were researched for the original dates. For your new dates, check the live price and type it in above.</span>' : ''}</p>
       <p class="muted small">With this flight our trip (${esc(planName())}) costs <b>${eur(compute(calc).total)}</b> for two. ${budgetBadge(compute(calc).total)}</p></div>`;
   }
   function renderFlights() {
     const sorted = [...T.flights].sort((a, b) => (a.avoid ? 1 : 0) - (b.avoid ? 1 : 0) || pr('flight:' + a.id, a.pp.typ) - pr('flight:' + b.id, b.pp.typ));
     const ok = sorted.filter(f => !f.avoid), cheap = ok[0], fast = [...ok].sort((a, b) => (a.durOut + a.durBack) - (b.durOut + b.durBack))[0];
     const badges = f => (f.id === T.meta.bestFlight ? pill('best choice', 'accent') : '') + (f.id === cheap.id ? pill('cheapest') : '') + (f.id === fast.id ? pill('fastest') : '') + (f.avoid ? '<span class="status bad">not for us</span>' : '');
-    $('#flights').innerHTML = flowBar('flights') + `<div class="head"><div><h2>Flights from Vienna</h2><p class="muted">Pick one flight. It is used for every route, the comparison and the calculator. Prices are per person, return, with a checked bag.</p></div></div>
+    $('#flights').innerHTML = flowBar('flights') + `<div class="head"><div><h2>Flights from ${esc(M.home)}</h2><p class="muted">Pick one flight. It is used for every route, the comparison and the calculator. Prices are per person, return, with a checked bag.</p></div></div>
       <div id="flight-sum">${flightSum()}</div>
       <h3>Choose a flight</h3>
       <div class="flist">${sorted.map(f => `<div class="frow ${f.id === gf && !has('flightown') ? 'on' : ''}"><button class="fpick" data-pickflight="${f.id}" aria-pressed="${f.id === gf}">
         <span class="radio"></span><span class="f-main"><b>${esc(f.airline)}</b> ${badges(f)}<small>via ${esc(f.via)} · ${f.stops} stop${f.stops === 1 ? '' : 's'} · ${hrs(f.durOut)} out / ${hrs(f.durBack)} back</small></span>
         <span class="f-price"><b>${eur(pr('flight:' + f.id, f.pp.typ))}</b><small>each</small><span class="status ${EV[f.ev][0]}">${EV[f.ev][1]}</span></span></button>
         <details><summary>Details</summary><p>${esc(f.note || '')} ${esc(f.bag || '')} ${esc(f.arrive ? 'Return: ' + f.arrive + '.' : '')} Likely range ${eur(f.pp.low)}–${eur(f.pp.high)} each. ${srcLinks(f.src)}</p></details></div>`).join('')}</div>
-      <p class="muted small">“Best choice” is the cheapest flight whose price we actually saw on the airline’s site for these dates. Estimates may turn out cheaper — or not. Flights leaving Vietnam in the evening land in Vienna the next morning.</p>
-      ${T.flightAlt ? `<details class="card fold"><summary><b>Other ways to fly</b> — open-jaw, straight to Phu Quoc, Austrian, SAS</summary>${T.flightAlt.map(n => `<p><b>${esc(n.t)}</b> ${esc(n.d)} ${srcLinks(n.src)}</p>`).join('')}</details>` : ''}
+      <p class="muted small">“Best choice” is the cheapest flight whose price we actually saw on the airline’s site for these dates. Estimates may turn out cheaper — or not. Evening departures usually land in ${esc(M.home)} the next morning — check the arrival date.</p>
+      ${T.flightAlt ? `<details class="card fold"><summary><b>Other ways to fly</b> — other airports, airlines and ticket types</summary>${T.flightAlt.map(n => `<p><b>${esc(n.t)}</b> ${esc(n.d)} ${srcLinks(n.src)}</p>`).join('')}</details>` : ''}
       <details class="card fold" ${PRINT ? 'open' : ''}><summary><b>Good to know before booking</b></summary>${T.flightNotes.map(n => `<p>${n.icon} <b>${esc(n.t)}</b> ${esc(n.d)} ${srcLinks(n.src)}</p>`).join('')}</details>
       <h2>How to book smart</h2><div class="grid3">${T.flightTips.map(h => `<div class="card"><div class="ico">${h.icon}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p>${srcLinks(h.src)}</div>`).join('')}</div>`;
   }
@@ -476,7 +477,7 @@
     const P = T.places, keys = Object.keys(T.legs);
     const cur = views.leg && T.legs[views.leg] ? views.leg : keys[0];
     const opts = T.legs[cur], [a, b] = cur.split('|');
-    $('#around').innerHTML = `<div class="head"><div><h2>Getting around Vietnam</h2><p class="muted">Flight, bus, ferry, train or car — what each one costs, how long it really takes door to door, and how hard it is.</p></div>${PRINT ? '' : toggle('around', 'Table')}</div>
+    $('#around').innerHTML = `<div class="head"><div><h2>Getting around ${esc(M.country)}</h2><p class="muted">What each one costs, how long it really takes door to door, and how hard it is.</p></div>${PRINT ? '' : toggle('around', 'Table')}</div>
       <div class="chips">${keys.map(k => { const [x, y] = k.split('|'); return `<button class="chip btnchip ${k === cur ? 'on' : ''}" data-leg="${k}">${esc(P[x].short)} ⇄ ${esc(P[y].short)}</button>`; }).join('')}</div>
       ${(PRINT ? keys : [cur]).map(k => { const o = T.legs[k], [x, y] = k.split('|'); return `<h3>${esc(P[x].name)} ⇄ ${esc(P[y].name)}</h3>
       ${showD('around') ? `<div class="grid3">${o.map(m => `<div class="card mode"><div class="ico">${m.icon}</div><h3>${esc(m.label)}</h3>
@@ -504,7 +505,7 @@
     $('#calc-inputs').innerHTML = `
       <div class="card"><h3>1 · Our route</h3><div class="chips">${T.scenarios.map(s => `<button class="chip btnchip ${calc.base === s.id ? 'on' : ''}" data-preset="${s.id}">${s.id} ${esc(s.short)}</button>`).join('')}</div></div>
       <div class="card"><h3>2 · Where and how long</h3>${stopRows}<button class="btn small" data-addstop>+ add a stop</button><p class="muted small" id="nights-msg"></p></div>
-      <div class="card"><h3>3 · Flight from Vienna</h3><select id="c-flight">${T.flights.map(f => `<option value="${f.id}" ${f.id === gf ? 'selected' : ''}>${esc(f.airline)} · ${eur(pr('flight:' + f.id, f.pp.typ))} each${f.avoid ? ' · not for us' : ''}</option>`).join('')}</select>
+      <div class="card"><h3>3 · Flight from ${esc(M.home)}</h3><select id="c-flight">${T.flights.map(f => `<option value="${f.id}" ${f.id === gf ? 'selected' : ''}>${esc(f.airline)} · ${eur(pr('flight:' + f.id, f.pp.typ))} each${f.avoid ? ' · not for us' : ''}</option>`).join('')}</select>
         <label class="field">Found a better price? Type it (per person, return) — used everywhere <input type="number" min="0" step="10" data-ov="flightown" class="${has('flightown') ? 'set' : ''}" value="${has('flightown') ? ov.flightown : ''}" placeholder="e.g. 1050"></label>
         <p class="muted small">The flight is the same for every route. <a href="#flights" data-go="flights">Compare flights →</a></p></div>
       <div class="card"><h3>4 · How you travel between places</h3>${legKeys.length ? legKeys.map(k => { const [a, b] = k.split('|'); const o = legOptions(a, b); return `<label class="field">${esc(P[a].short)} ⇄ ${esc(P[b].short)}<select data-legmode="${k}">${o.map(m => `<option value="${m.id}" ${calc.legMode[k] === m.id ? 'selected' : ''}>${m.icon || ''} ${esc(m.label)} · ${eur(pr('leg:' + k + ':' + m.id, m.pp) * 2)} · ${hrs(m.hours)}</option>`).join('')}</select></label>`; }).join('') : '<p class="muted">No journeys needed — one base only.</p>'}</div>
@@ -564,7 +565,7 @@
     const grp = (t, d, rows) => `<div class="card"><h3>${t}</h3><p class="muted small">${d}</p><div class="tablewrap flat"><table class="mini ovtbl"><thead><tr><th>Item</th><th>Researched</th><th>Our price €</th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table></div></div>`;
     $('#mine').innerHTML = `<div class="head"><div><h2>Our own prices</h2><p class="muted">Found something cheaper — a friend’s flat, a flight deal, a driver someone recommended? Type the price here. It replaces the researched number everywhere: all routes, the comparison, and the calculator recalculate at once. Leave a box empty to keep the researched price; type 0 for free.</p></div></div>
       <div class="calc"><div id="calc-inputs-m" class="stackcol">
-      ${grp('✈️ Flights from Vienna', 'Per person, return, including a checked bag.', [ovRow('flightown', '<b>Our own flight price</b>', (T.flights.find(f => f.id === gf) || T.flights[0]).pp.typ, 'per person', 'Replaces the chosen flight everywhere')].concat(T.flights.map(f => ovRow('flight:' + f.id, `<b>${esc(f.airline)}</b>`, f.pp.typ, 'per person'))))}
+      ${grp('✈️ Flights from ' + esc(M.home), 'Per person, return, including a checked bag.', [ovRow('flightown', '<b>Our own flight price</b>', (T.flights.find(f => f.id === gf) || T.flights[0]).pp.typ, 'per person', 'Replaces the chosen flight everywhere')].concat(T.flights.map(f => ovRow('flight:' + f.id, `<b>${esc(f.airline)}</b>`, f.pp.typ, 'per person'))))}
       ${grp('🏨 Hotels', 'Per night for your double room. Researched price shown is the “Good 3–4★” level; your own price is used for every night (no New-Year surcharge added).', pk.map(k => ovRow('hotel:' + k, `${P[k].emoji} <b>${esc(P[k].name)}</b>`, P[k].hotel.mid, 'per night')))}
       ${grp('🍜 Food & drinks', 'Per day for both of you.', pk.map(k => ovRow('food:' + k, `${P[k].emoji} <b>${esc(P[k].name)}</b>`, P[k].food.mixed, 'per day, two people')))}
       ${grp('🚕 Taxis & local transport', 'Per day for both of you.', pk.map(k => ovRow('local:' + k, `${P[k].emoji} <b>${esc(P[k].name)}</b>`, P[k].localPerDay, 'per day, two people')))}
@@ -583,7 +584,7 @@
     const echo = { consensus: ['good', 'many travellers agree'], several: ['info', 'said by several'], single: ['warn', 'one traveller’s view'], official: ['good', 'official source'] };
     const body = `<div class="grid3 tips">${list.map(t => `<div class="card tip"><div class="tip-top">${pill(t.topic)}<span class="status ${(echo[t.echo] || echo.several)[0]}">${(echo[t.echo] || echo.several)[1]}</span></div><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p>${srcLinks(t.src)}</div>`).join('') || '<p>No tips match.</p>'}</div>`;
     if ($('#tips-body') && !PRINT) { $('#tips-body').innerHTML = body; $$('#tips [data-topic]').forEach(b => b.classList.toggle('on', b.dataset.topic === sel)); return; }
-    $('#tips').innerHTML = `<div class="head"><div><h2>What other travellers recommend</h2><p class="muted">${T.tips.length} tips collected from travel forums (TripAdvisor, Travelfish, Fodor’s), Vietnamese news, blogs and official sites — paraphrased, each with its source. Reddit blocks automated reading, so its threads could not be included.</p></div></div>
+    $('#tips').innerHTML = `<div class="head"><div><h2>What other travellers recommend</h2><p class="muted">${T.tips.length} tips collected from travel forums, local news, blogs and official sites — paraphrased, each with its source. Reddit blocks automated reading, so its threads could not be included.</p></div></div>
       <div class="controls"><div class="chips"><button class="chip btnchip on" data-topic="all">All</button>${topics.map(t => `<button class="chip btnchip" data-topic="${esc(t)}">${esc(t)}</button>`).join('')}</div>
       <input type="search" id="tip-q" placeholder="Search tips… e.g. taxi, jellyfish, ATM" aria-label="Search tips"></div><div id="tips-body">${body}</div>`;
   }
@@ -591,7 +592,7 @@
   /* ---------- CHECKLIST & SOURCES ---------- */
   function renderPrep() {
     const done = store.get('todo', {});
-    const must = T.mustDo ? `<div class="must"><h2>⚠️ Important preparation — we must do these</h2><p>Without these you may not be allowed to board or enter Vietnam, or you travel unprotected. Do them first.</p>${T.mustDo.map((it, i) => { const id = 'must' + i; return `<label class="check todo"><input type="checkbox" data-todo="${id}" ${done[id] ? 'checked' : ''}><span><b>${esc(it.t)}</b> ${it.when ? `<em>${esc(it.when)}</em>` : ''}<small>${esc(it.d || '')} ${srcLinks(it.src)}</small></span></label>`; }).join('')}</div>` : '';
+    const must = T.mustDo ? `<div class="must"><h2>⚠️ Important preparation — we must do these</h2><p>Without these you may not be allowed to board or enter ${esc(M.country)}, or you travel unprotected. Do them first.</p>${T.mustDo.map((it, i) => { const id = 'must' + i; return `<label class="check todo"><input type="checkbox" data-todo="${id}" ${done[id] ? 'checked' : ''}><span><b>${esc(it.t)}</b> ${it.when ? `<em>${esc(it.when)}</em>` : ''}<small>${esc(it.d || '')} ${srcLinks(it.src)}</small></span></label>`; }).join('')}</div>` : '';
     $('#prep').innerHTML = must + `<div class="head"><div><h2>Before you go and what to pack</h2><p class="muted">Bookings, papers, health, clothes and everything for the suitcase. Tick things off — it is remembered on this device.</p></div></div>
       <div class="grid2">${T.checklist.map(g => `<div class="card"><h3>${g.icon} ${esc(g.t)}</h3>${g.items.map((it, i) => { const id = g.t + i; return `<label class="check todo"><input type="checkbox" data-todo="${esc(id)}" ${done[id] ? 'checked' : ''}><span>${esc(it.t)} <small>${esc(it.d || '')} ${srcLinks(it.src)}</small></span></label>`; }).join('')}</div>`).join('')}</div>
       ${T.health ? `<h2>Health and vaccinations</h2><p class="muted">${esc(T.health.intro)}</p><div class="tablewrap"><table class="tbl"><thead><tr><th>Vaccine / risk</th><th>For this trip</th><th>What to know</th></tr></thead><tbody>${T.health.rows.map(r => `<tr><td><b>${esc(r.v)}</b></td><td><span class="status ${r.lvl}">${esc(r.lbl)}</span><br><small>${esc(r.who)}</small></td><td>${esc(r.d)}</td></tr>`).join('')}</tbody></table></div><p>${srcLinks(T.health.src)}</p>` : ''}
@@ -608,10 +609,11 @@
     if (!TABS[t]) t = 'overview'; tab = t;
     $$('.tabpane').forEach(p => p.hidden = !PRINT && p.id !== t);
     $$('nav [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === t));
-    TABS[t]();
+    TABS[t](); writeSummary();
     if (!keepScroll) window.scrollTo({ top: 0 });
     if (!PRINT && !location.hash.startsWith('#plan=')) history.replaceState(null, '', '#' + t);
   }
+  function writeSummary() { try { const r = compute(calc), f = T.flights.find(x => x.id === gf) || T.flights[0]; localStorage.setItem('trips.summary.' + M.key, JSON.stringify({ total: Math.round(r.total), route: planName(), flight: has('flightown') ? 'Our own price' : f.airline, nights: tripN, d0, d1, picked, at: Date.now() })); } catch (e) { } }
   const rerender = () => { TABS[tab](); if ($('#dlg').open) openDetail($('#dlg').dataset.sid); };
 
   document.addEventListener('click', e => {
@@ -640,8 +642,8 @@
     if (d.preset) { calc = cfgFromScenario(scen(d.preset)); saveCalc(); mark('r'); return renderCalc(); }
     if (d.step !== undefined) { const s = calc.stops[+d.step]; s.nights = Math.max(0, Math.min(30, s.nights + +d.d)); custom(); fitDates(); saveCalc(); return renderCalc(); }
     if (d.mv !== undefined) { const i = +d.mv, j = i + +d.d; [calc.stops[i], calc.stops[j]] = [calc.stops[j], calc.stops[i]]; custom(); saveCalc(); return renderCalc(); }
-    if (d.rm !== undefined) { calc.stops.splice(+d.rm, 1); if (!calc.stops.length) calc.stops.push({ place: 'pq', nights: 1 }); custom(); fitDates(); saveCalc(); return renderCalc(); }
-    if (d.addstop !== undefined) { calc.stops.push({ place: 'pq', nights: 2 }); custom(); fitDates(); saveCalc(); return renderCalc(); }
+    if (d.rm !== undefined) { calc.stops.splice(+d.rm, 1); if (!calc.stops.length) calc.stops.push({ place: HUB, nights: 3 }); custom(); fitDates(); saveCalc(); return renderCalc(); }
+    if (d.addstop !== undefined) { calc.stops.push({ place: (Object.keys(T.places).find(k => T.places[k].beach) || HUB), nights: 2 }); custom(); fitDates(); saveCalc(); return renderCalc(); }
     if (d.level) { calc.level = d.level; saveCalc(); return renderCalc(); }
     if (d.hl) { calc.hotelLvl = d.hl; custom(); saveCalc(); return renderCalc(); }
     if (d.fl) { calc.foodLvl = d.fl; custom(); saveCalc(); return renderCalc(); }
@@ -654,6 +656,7 @@
     }
     if (t.id === 'theme') { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme = dark ? 'light' : 'dark'; store.set('theme', r.dataset.theme); }
     if (t.id === 'print') window.open('trip-report.pdf', '_blank');
+    if (d.cmp === undefined && d.todo === undefined) writeSummary();
   });
   document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('article[data-open]')) { e.preventDefault(); openDetail(e.target.dataset.open); } });
   function setDates(a, b) {
@@ -702,7 +705,8 @@
 
   /* boot */
   const th = store.get('theme', null); if (th) document.documentElement.dataset.theme = th;
-  $('#updated').textContent = T.meta.updatedHuman;
+  $('#updated').textContent = T.meta.updatedHuman; document.title = M.title; $('#brand').textContent = M.title; $('#logo').textContent = M.emoji;
+  const sw = $('#tripsw'); if (sw && window.TRIPS) { sw.innerHTML = window.TRIPS.map(t => `<option value="${esc(t.key)}" ${t.key === M.key ? 'selected' : ''}>${t.emoji} ${esc(t.country)}</option>`).join(''); sw.addEventListener('change', () => { location.href = '../' + sw.value + '/'; }); }
   if (PRINT) { document.body.classList.add('print'); Object.keys(TABS).forEach(k => { tab = k; TABS[k](); }); $$('.tabpane').forEach(p => p.hidden = false); }
   else go(sharedPlan ? 'calc' : (location.hash.slice(1) || 'overview'));
   pull(true); setInterval(() => { if (syncOn && !document.hidden) pull(false); }, 15000);
