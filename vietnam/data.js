@@ -95,14 +95,14 @@
       { icon: '🌊', t: 'Stay south for swimming', d: 'Phu Quoc’s west coast is calm and 27–28 °C in January. Hoi An is cool, rainy and rough; Hanoi is grey and 10–20 °C. Adding them costs beach days and needs warm clothes.' },
       { icon: '🛂', t: 'You both need an e-visa', d: 'Neither Ireland nor Austria is on Vietnam’s visa-free list. The e-visa is USD 25 each, only from evisa.gov.vn. Being born in Iran is asked on the form but an Austrian passport is fine. Avoid flights via Dubai or Abu Dhabi. Details on the Checklist page.' },
       { icon: '🛬', t: 'You land back in Vienna on 16 Jan', d: 'Almost every flight leaving Vietnam on the evening of 15 Jan arrives in Vienna the next morning. If you must be home on the 15th, you need to leave on the 14th.' },
-      { icon: '🧮', t: 'The honest total is above €5,000', d: 'With the hotel prices from our first plan and mostly local food, the beach routes come to about €5,400–5,900 for two; the flights are the main reason. Simple hotels, street food and a cheaper flight (Turkish or Air China, if a real quote confirms it) bring them to about €4,300–4,900. Try the “Ways to pay less” buttons in the calculator.' }
+      { icon: '🧮', t: 'The honest total is above €5,000', d: 'With good 4★ hotels at real January prices and mostly local food, the beach routes come to about €5,700–6,500 for two. Simple 3★ hotels, street food and a cheaper flight (Turkish or Air China, if a real quote confirms it) bring them to about €4,400–5,000. Try the “Ways to pay less” buttons in the calculator.' }
     ],
 
     places: {
       hcmc: { name: 'Ho Chi Minh City (Saigon)', short: 'Saigon', emoji: '🏙️', beach: false, swim: 0,
         blurb: 'Street food, rooftop bars, museums, markets. Hot and dry.',
         hotel: { budget: 38, mid: 48, nice: 85 }, peakMult: 1.15, food: { local: 16, mixed: 28, tourist: 50 }, localPerDay: 9,
-        hotelNote: 'The “good 3–4★” prices used in all routes are the nightly rates from our first plan: €48 Saigon, €68 Phu Quoc, €44 Mekong, €50 Hoi An and Hanoi. They came from date-based samples on helloaxel.com — check your exact nights there or on Booking.com. District 1 or the District 1/3 border, a few streets back from Bui Vien.', foodNote: 'Assumes mostly local places with a few restaurant meals. Pho €1–2, banh mi under €2, restaurant main €5–10.', localNote: 'Grab rides are €1–4 in the centre.',
+        hotelNote: 'The typical Phu Quoc prices (€50 simple, €110 good, €170 nice) come from our own live Booking.com search for a 10-night January stay. The other places still use the rates from our first plan (€48 Saigon, €44 Mekong, €50 Hoi An and Hanoi) and have not been checked for our nights. District 1 or the District 1/3 border, a few streets back from Bui Vien.', foodNote: 'Assumes mostly local places with a few restaurant meals. Pho €1–2, banh mi under €2, restaurant main €5–10.', localNote: 'Grab rides are €1–4 in the centre.',
         wx: { air: '31–33 °C by day, 22 °C at night', rain: 'Dry season, almost none', sea: 'No beach' }, src: [src.hcmHotel, src.foodHcm] },
       mekong: { name: 'Mekong Delta (Ben Tre)', short: 'Mekong', emoji: '🛶', beach: false, swim: 0,
         blurb: 'Coconut canals, bicycles, homestay dinners, river life.',
@@ -111,8 +111,8 @@
         wx: { air: '30–32 °C', rain: 'Dry season', sea: 'River only — no swimming' }, src: [S('Ben Tre lodges', 'https://momondo.com/hotels/ben-tre/Mekong-Home.mhd2948519.ksp')] },
       pq: { name: 'Phu Quoc island', short: 'Phu Quoc', emoji: '🏝️', beach: true, swim: 5,
         blurb: 'Calm warm sea on the west coast, sunsets, seafood, snorkelling.',
-        hotel: { budget: 45, mid: 68, nice: 120 }, peakMult: 1.45, food: { local: 22, mixed: 36, tourist: 70 }, localPerDay: 12,
-        hotelNote: 'West coast: Ong Lang (quiet) or Long Beach (lively).', foodNote: 'Assumes breakfast at the hotel, a local lunch and a seafood dinner (€10–17 for two at market stalls). Beach-bar cocktail €3–6; resort dining costs far more.', localNote: 'Taxis between areas €5–14; the island is 50 km long.',
+        hotel: { budget: 50, mid: 110, nice: 170 }, peakMult: 1.45, food: { local: 22, mixed: 36, tourist: 70 }, localPerDay: 12,
+        hotelNote: 'West coast: Ong Lang (quiet) or Long Beach (lively). Prices updated from a live Booking.com search for a 10-night January stay: a 3★ about €51, 4★ hotels €126–189 a night with breakfast.', foodNote: 'Assumes breakfast at the hotel, a local lunch and a seafood dinner (€10–17 for two at market stalls). Beach-bar cocktail €3–6; resort dining costs far more.', localNote: 'Taxis between areas €5–14; the island is 50 km long.',
         wx: { air: '29–31 °C', rain: 'Dry season, 2–4 short showers a month', sea: '27–28 °C, calm on the west coast (Long Beach, Ong Lang). East coast (Sao) is windier.' }, src: [src.pqHotel, src.pqPrices, src.pqPeak] },
       hoian: { name: 'Hoi An (via Da Nang)', short: 'Hoi An', emoji: '🏮', beach: false, swim: 1,
         blurb: 'Lantern-lit old town, tailors, cooking classes. Cool and showery in January.',
