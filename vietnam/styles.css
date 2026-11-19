@@ -210,3 +210,17 @@ input[type=text],input[type=url]{font:inherit;color:var(--ink);background:var(--
 :root[data-theme="dark"] .must,:root[data-theme="dark"] .mustbar{background:#3a1e0c;color:#ffe3cc}:root[data-theme="dark"] .must h2,:root[data-theme="dark"] .mustbar b{color:#ff9b66}:root[data-theme="dark"] .must .check small,:root[data-theme="dark"] .must .srcs,:root[data-theme="dark"] .must .srcs a{color:#e0b99c}
 .must em{display:inline-block;margin:2px 0 2px 6px}.check span{min-width:0;overflow-wrap:anywhere}
 .must .check b{white-space:normal}
+
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 16px}
+.flow a{display:flex;gap:8px;align-items:center;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0}
+.flow a.cur{border:2px solid var(--accent);background:var(--accent-soft)}.fl-n{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--line);color:var(--ink2);font-weight:800;font-size:.8rem}
+.ok>.fl-n,.ok .fl-n{background:var(--accent);color:var(--accent-ink)}.fl-t{min-width:0}.fl-t b{display:block;font-size:.85rem}.fl-t small{display:block;color:var(--muted);font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){.flow{grid-template-columns:repeat(2,1fr)}}
+.steps{list-style:none;margin:12px 0 8px;padding:0;display:flex;flex-direction:column;gap:6px}.steps a{display:flex;gap:10px;align-items:flex-start;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.steps a:hover{border-color:var(--accent)}.steps small{display:block;color:var(--muted)}.steps em{font-style:normal;font-size:.72rem;color:var(--warn);background:var(--warn-bg);border-radius:999px;padding:1px 7px;margin-left:4px}
+.hero-card{align-self:stretch}.route .det-actions{margin-top:auto;align-items:center;justify-content:space-between}.route .more{margin:0}
+.chip.dim{opacity:.6}
+
+.sync.on{color:var(--good)}.sync.busy{color:var(--info)}.sync.off{color:var(--muted)}
+
+.fdates{font-size:.92rem;margin:.6em 0}

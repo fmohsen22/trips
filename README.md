@@ -21,3 +21,14 @@ Everything — prices, flights, routes, tips, sources — lives in `vietnam/data
 | Traveller tips | `tips` |
 
 `vietnam/trip-report.pdf` is a print of `vietnam/index.html?print=1` (A4, 62% scale, backgrounds on).
+
+## Sharing choices between the two of us
+
+Flight, route, hotels, own prices, dates and ticked checklist items are saved online through `api/state.js`, so both of us see the same thing. This needs a small free database connected once in Vercel:
+
+1. Vercel → the project → **Storage** → **Create Database** → **Upstash for Redis** (free plan) → connect it to this project.
+2. **Deployments** → redeploy the latest one.
+
+The header of the site then shows "☁ Shared". Without the database it shows "💾 Saved on this device only" and everything still works per device (use "Copy link to share this plan" in the calculator instead).
+
+Anyone who knows the site address can change the shared choices — there is no login.
