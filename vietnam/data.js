@@ -338,6 +338,22 @@
       { topic: 'Health', echo: 'several', title: 'Ask a travel clinic about hepatitis A', text: 'Recommended for nearly all travellers to Vietnam; typhoid and others depend on your plans. Malaria is not a concern on this route.', src: [S('ADAC: Vietnam health', 'https://www.adac.de/gesundheit/reiselaender/vietnam/')] }
     ],
 
+    health: {
+      intro: 'No vaccination is compulsory for entering Vietnam from Europe. These are the ones doctors recommend or discuss. You fly in under six weeks, so book a travel-medicine appointment this week — some vaccines need two weeks or more to work. This is general guidance, not medical advice for you personally.',
+      rows: [
+        { v: 'Routine vaccines up to date', who: 'Both of you', lvl: 'good', lbl: 'check', d: 'Tetanus, diphtheria, whooping cough, polio and measles-mumps-rubella. Bring your vaccination pass to the appointment.' },
+        { v: 'Hepatitis A', who: 'Both of you', lvl: 'good', lbl: 'recommended', d: 'The one vaccine recommended for practically every traveller to Vietnam, whatever the route. Spread through food and water. One dose before travel protects for the trip; a second dose later gives long-term protection.' },
+        { v: 'Typhoid', who: 'Worth discussing', lvl: 'warn', lbl: 'depends', d: 'Advised for independent travel with lots of street food or basic hygiene conditions — which fits a Mekong homestay and market eating. Needs about two weeks to take effect.' },
+        { v: 'Hepatitis B', who: 'Worth discussing', lvl: 'warn', lbl: 'depends', d: 'Mainly for longer stays or possible medical or dental treatment abroad. Many people already have it from childhood programmes or as a combined hepatitis A+B vaccine.' },
+        { v: 'Rabies', who: 'Usually not needed', lvl: 'info', lbl: 'optional', d: 'Vietnam has rabies. For a short beach-and-city holiday most doctors skip it; simply do not touch dogs, cats or monkeys, and see a doctor immediately after any bite or scratch.' },
+        { v: 'Japanese encephalitis', who: 'Usually not needed', lvl: 'info', lbl: 'optional', d: 'Recommended for rural stays of a month or more, or in the wet season. One night in the Mekong in the dry season is normally below that threshold.' },
+        { v: 'Malaria tablets', who: 'Not needed', lvl: 'info', lbl: 'no', d: 'Risk is limited to remote highland areas, not Saigon, the Mekong towns, Phu Quoc, Hoi An or Hanoi.' },
+        { v: 'Dengue', who: 'Protect against bites', lvl: 'warn', lbl: 'repellent', d: 'Cases are up about 25% in 2026, mostly in the south. There is no tablet; the vaccine is generally only advised after a previous infection. Use repellent during the day and sleep with air-conditioning or a net.' },
+        { v: 'Yellow fever', who: 'Not needed', lvl: 'info', lbl: 'no', d: 'A certificate is only asked for if you arrive from a country with yellow fever. Flying from Europe via Istanbul, the Gulf or East Asia does not count.' }
+      ],
+      src: [S('University of Zurich travel medicine: Vietnam', 'https://reisemedizin.uzh.ch/hubfs/SpotLIGHT_Vietnam%20DE.pdf'), S('ADAC: Vietnam health', 'https://www.adac.de/gesundheit/reiselaender/vietnam/'), S('Norwegian Institute of Public Health: Vietnam', 'https://www.fhi.no/en/in/travel/traveladvice-vaccines/asia/viet-nam'), S('Österreichische Ärztezeitung: Reiseimpfungen', 'https://aerztezeitung.at/wp-content/uploads/2019/05/OA_Reiseimpfungen.pdf'), S('Dengue in southern Vietnam 2026', 'https://www.mesvaccins.net/web/news/24550-viet-nam-si-globalement-l-activite-de-la-dengue-diminue-l-analyse-regionale-montre-une-progression-dans-le-sud-du-pays-en-particulier-a-ho-chi-minh')]
+    },
+
     saveTips: [
       'Shift the flight by a day or two: the same airline showed €1,200 on 28 Dec and €1,690 on 26 Dec.',
       'Book hotel rates with breakfast included — it is often only €3–5 more and saves a meal a day.',
