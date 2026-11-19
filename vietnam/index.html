@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sophie &amp; Mohsey in Vietnam</title>
+<meta name="description" content="Our Vietnam trip planner: routes, verified prices, flights, transport and a live budget calculator.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">🌴</span><div><b>Sophie &amp; Mohsey in Vietnam</b><small>prices checked <span id="updated"></span></small></div></div>
+  <div class="top-actions"><button class="btn small" id="print" title="Open the PDF report">⬇ PDF</button><button class="btn small" id="theme" title="Light / dark">◐</button></div>
+</header>
+<nav class="tabs" aria-label="Sections">
+  <button data-go="overview">Overview</button>
+  <button data-go="routes">Routes</button>
+  <button data-go="compare">Compare</button>
+  <button data-go="flights">Flights</button>
+  <button data-go="around">Getting around</button>
+  <button data-go="calc">Calculator</button>
+  <button data-go="mine">Our prices</button>
+  <button data-go="tips">Tips</button>
+  <button data-go="prep">Checklist</button>
+</nav>
+<main>
+  <section class="tabpane" id="overview"></section>
+  <section class="tabpane" id="routes" hidden></section>
+  <section class="tabpane" id="compare" hidden></section>
+  <section class="tabpane" id="flights" hidden></section>
+  <section class="tabpane" id="around" hidden></section>
+  <section class="tabpane" id="calc" hidden></section>
+  <section class="tabpane" id="mine" hidden></section>
+  <section class="tabpane" id="tips" hidden></section>
+  <section class="tabpane" id="prep" hidden></section>
+</main>
+<footer>Planning estimates for two travellers, not bookable quotes. Made with ♥ for Sophie &amp; Mohsey.</footer>
+<dialog id="dlg"><div id="dlg-body"></div></dialog>
+<div id="tip" role="tooltip" hidden></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
