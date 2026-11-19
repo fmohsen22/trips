@@ -82,35 +82,17 @@
     meta: {
       updatedHuman: '19 Nov 2026', eurVnd: 28500, budgetMin: 4000, budgetMax: 5000,
       peakNights: 5, shopping: 150, reservePct: 5, visaDefault: true, recommended: 'I',
-      lede: 'Seventeen nights of sun, sea and street food. Here is every route we could take, what each really costs after re-checking the prices, and a calculator to shape our own.',
+      lede: 'Seventeen nights of sun, sea and street food. Here is every route we could take, what each one costs, and a calculator to shape our own.',
       recWhy: 'New Year’s Eve fireworks in Saigon, one night in the Mekong, then twelve nights on Phu Quoc’s calm west coast — and it dodges the island’s New-Year hotel surcharge.'
     },
 
     headlines: [
-      { icon: '✈️', t: 'Flights cost more than the old PDF said', d: 'No airline flies Vienna–Vietnam nonstop. For 28 Dec → 15 Jan the best-evidenced fare is EVA Air at about €1,240 each with bags, so about €2,500 for two — not €2,200. Turkish or Air China may be cheaper, but we found no peak-date quote for them.' },
+      { icon: '✈️', t: 'Flights: about €2,500 for two', d: 'No airline flies Vienna–Vietnam nonstop. For 28 Dec → 15 Jan the best-evidenced fare is EVA Air at about €1,240 each with bags, so about €2,500 for two. Turkish or Air China may be cheaper, but we have no firm price for them on these dates yet.' },
       { icon: '🏝️', t: 'Phu Quoc over New Year is pricey', d: '29 Dec – 2 Jan is absolute peak: hotels add roughly 30–60%, and many 4–5★ resorts charge a compulsory gala dinner on 31 Dec (about €60–185 per person). Spending New Year in Saigon first avoids most of it.' },
       { icon: '🌊', t: 'Stay south for swimming', d: 'Phu Quoc’s west coast is calm and 27–28 °C in January. Hoi An is cool, rainy and rough; Hanoi is grey and 10–20 °C. Adding them costs beach days and needs warm clothes.' },
       { icon: '🛂', t: 'Austrian passports need an e-visa', d: 'Austria is not on Vietnam’s 45-day visa-free list. The e-visa is USD 25 each, only from evisa.gov.vn. Other passports have different rules — check yours. A free digital arrival card is also required within 72 hours before landing.' },
       { icon: '🛬', t: 'You land back in Vienna on 16 Jan', d: 'Almost every flight leaving Vietnam on the evening of 15 Jan arrives in Vienna the next morning. If you must be home on the 15th, you need to leave on the 14th.' },
       { icon: '🧮', t: 'The honest total is above €5,000', d: 'With good 3–4★ hotels and mixed dining, the beach routes come to about €5,700–6,200 for two. Simple 3★ hotels plus mostly local food brings them to €4,850–5,100, and a cheaper flight (Turkish or Air China, if a real quote confirms it) can take off another €100–600. Try it in the calculator.' }
-    ],
-
-    corrections: [
-      { item: 'Flights Vienna ⇄ Saigon, two people', old: '€2,200', now: '€2,400–2,800 typical (EVA €2,480)', v: 'bad', why: 'EVA showed €1,220–1,241 per person on near-identical dates; Vietnam Airlines €1,256–2,328. €2,200 needs a Chinese carrier or a sale fare.', src: [src.eva, src.vna] },
-      { item: 'Flights Vienna ⇄ Phu Quoc, two people', old: '€2,700', now: '€2,900–3,500', v: 'bad', why: 'Vietnam Airlines showed €1,429–1,729 per person. Flying to Saigon and adding a domestic flight is cheaper.', src: [src.vnaPqc] },
-      { item: 'Open-jaw (home from Hanoi or Da Nang)', old: '€2,400 / €2,450', now: '€2,800–2,900 (estimate)', v: 'warn', why: 'No live quote found; open-jaws usually price near the average of the two returns, and Hanoi peak fares are erratic.' },
-      { item: 'Phu Quoc hotel, 5–14 Jan', old: '€68–72', now: '€78 (good 3–4★)', v: 'warn', why: 'Fine for a simple hotel; a nice beachfront 4★ is €80–120.', src: [src.pqHotel] },
-      { item: 'Phu Quoc hotel, 29 Dec – 2 Jan', old: '€68–72', now: '€100–140', v: 'bad', why: 'New-Year peak surcharge of 30–60% was not in the old model.', src: [src.pqPeak, src.pqPrices] },
-      { item: 'New Year’s Eve gala dinner', old: 'not included', now: '€0–370 for two', v: 'bad', why: 'Compulsory at many 4–5★ resorts (VND 1.8–5.5 million per adult). Small 3★ hotels usually have none — ask before booking.', src: [src.gala1, src.gala2] },
-      { item: 'Saigon hotel', old: '€48', now: '€55 (good 3–4★)', v: 'warn', why: '€48 gets a decent 3★; a nice 4★ in District 1 is €65–90.', src: [src.hcmHotel] },
-      { item: 'Food for two per day', old: '€25 city / €32 island', now: '€36 city / €48 island', v: 'bad', why: 'The old figures only work with street food at every meal. Mixed local and restaurant dining costs more, and Phu Quoc is Vietnam’s priciest beach.', src: [src.foodHcm, src.pqPrices] },
-      { item: 'Cu Chi tunnels, two people', old: '€70', now: '€40 (group tour)', v: 'warn', why: 'Group half-day tours are USD 17–24 each. €70+ is the speedboat version.', src: [src.cuchi] },
-      { item: 'Ninh Binh day trip, two people', old: '€125', now: '€92', v: 'warn', why: 'Small-group tours run USD 46–60 each.', src: [src.ninh] },
-      { item: 'Snorkel tour, two people', old: '€100', now: '€60 group / €92 speedboat', v: 'good', why: 'The old figure covers a small-group speedboat tour.', src: [src.snorkel] },
-      { item: 'Jet ski', old: 'VND 600,000 / 10 min', now: 'about €25 / 15 min', v: 'good', why: 'Quotes vary (VND 500,000–1,200,000) and are negotiable.', src: [src.jetski] },
-      { item: 'Visa + insurance + SIM', old: '€150', now: '€149 (medical-only insurance)', v: 'good', why: 'E-visas €44, eSIMs €15, insurance about €90. With trip-cancellation cover, insurance alone is €150–300.', src: [src.evisa, src.esim] },
-      { item: 'Domestic flight Saigon ⇄ Phu Quoc', old: '€145 return each', now: '€110 return each', v: 'good', why: 'About €55 each way with a 23 kg bag in early January; “from” fares start at €27.', src: [src.vnaDom] },
-      { item: 'Night market on Phu Quoc', old: 'assumed open', now: 'old site closed', v: 'warn', why: 'The Bach Dang night market was dismantled in spring 2026; a replacement is reported near Nguyen Trai Street. Check locally.', src: [src.market] }
     ],
 
     places: {
@@ -159,7 +141,7 @@
     ],
 
     flightNotes: [
-      { icon: '⚠️', t: 'These are not bookable quotes.', d: 'Flight-search sites (Google Flights, Skyscanner, Kayak) could not be opened from our research tool, so prices come from airline fare pages for close-by dates, or are marked as estimates. Do one manual search and type the real price into “Our prices”.' },
+      { icon: '⚠️', t: 'These are not bookable quotes.', d: 'Prices come from airline fare pages for close-by dates, or are marked as estimates. Search your exact dates once and type the real price into “Our prices”.' },
       { icon: '🇦🇹', t: 'Austrian Airlines', d: 'does not fly to Vietnam. Its only nearby route is Vienna–Bangkok nonstop (daily this winter). Vietnam needs a Lufthansa connection or a separate onward ticket.', src: [src.os] },
       { icon: '🇸🇪', t: 'SAS', d: 'has no flights of its own to Vietnam. It codeshares on Vietnam Airlines’ Copenhagen–Saigon nonstop, which from Vienna means two stops. No fare was found; not a practical choice.', src: [src.sas] },
       { icon: '🛬', t: 'Arrival day:', d: 'evening departures on 15 Jan land in Vienna on the morning of 16 Jan. To be home on the 15th, leave Vietnam on the 14th.' },

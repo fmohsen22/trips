@@ -213,10 +213,6 @@
         <div class="hero-card"><small>Our pick right now</small><b>${esc(rec.s.id)} · ${esc(rec.s.title)}</b><div class="big">${eur(rec.r.total)}</div>${budgetBadge(rec.r.total)}
         <p>${esc(T.meta.recWhy)}</p><button class="btn small" data-open="${rec.s.id}">See the details</button></div></div>
       <h2>The short version</h2><div class="grid3">${T.headlines.map(h => `<div class="card"><div class="ico">${h.icon}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p></div>`).join('')}</div>
-      <h2>What we corrected from the old PDF</h2>
-      <p class="muted">Every number was re-checked on ${esc(T.meta.updatedHuman)}. “Verified” means we saw it on a live page; “estimate” means the live site would not show a price and we used the best available evidence.</p>
-      <div class="tablewrap"><table class="tbl"><thead><tr><th>Item</th><th>Old PDF</th><th>Checked now</th><th>Verdict</th><th>Why</th></tr></thead><tbody>
-      ${T.corrections.map(c => `<tr><td><b>${esc(c.item)}</b></td><td>${esc(c.old)}</td><td>${esc(c.now)}</td><td><span class="status ${c.v}">${c.v === 'good' ? '✓ ok' : c.v === 'warn' ? '▲ adjusted' : '✕ wrong'}</span></td><td>${esc(c.why)} ${srcLinks(c.src)}</td></tr>`).join('')}</tbody></table></div>
       <h2>All routes at a glance</h2>
       ${barChart(all.map(x => ({ label: x.s.id + '  ' + x.s.short, v: x.r.total, hl: x.s.id === T.meta.recommended, c: x.s.id === T.meta.recommended ? 'var(--s1)' : 'var(--s1-soft)' })), { band: [T.meta.budgetMin, T.meta.budgetMax] })}
       <p class="muted">Typical prices, good 3–4★ hotels, mixed food. Change any assumption in the calculator.</p>`;
