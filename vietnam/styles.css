@@ -171,3 +171,12 @@ body.print .tips .card{padding:10px}body.print .grid3{grid-template-columns:repe
 @media(max-width:900px){.calc{grid-template-columns:minmax(0,1fr)}}
 select{min-width:0;width:100%}.stoprow select{width:auto}
 @media(max-width:520px){.bar-row{grid-template-columns:minmax(70px,96px) 1fr}.hero h1{font-size:2rem}}
+
+.savers{border:1px solid var(--line);border-radius:14px;padding:12px;margin:12px 0;background:var(--bg)}
+.saver{display:flex;gap:10px;align-items:center;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:6px;cursor:pointer}
+.saver:hover{border-color:var(--accent)}.saver.on{background:var(--accent-soft);border-color:var(--accent)}
+.sv-ico{font-size:1.2rem;width:26px;text-align:center;flex:none}.sv-txt{flex:1;min-width:0}.sv-txt b{display:block;font-size:.92rem}.sv-txt small{display:block;color:var(--muted);font-size:.78rem}
+.sv-amt{font-weight:800;color:var(--good);white-space:nowrap;font-variant-numeric:tabular-nums}.saver.on .sv-amt{color:var(--ink2);font-weight:600;font-size:.8rem}
+.moretips{margin-top:8px;font-size:.88rem}.moretips summary{cursor:pointer;color:var(--accent);font-weight:600}
+.hotelmini{list-style:none;padding:0;margin:.2em 0 .8em;font-size:.88rem}.hotelmini li{display:flex;gap:8px;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}.hotelmini li span:last-child{white-space:nowrap;font-weight:600}
+.hotel h3{margin-bottom:0}.hotel .det-actions{margin-top:10px}

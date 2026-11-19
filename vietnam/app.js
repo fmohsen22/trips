@@ -201,6 +201,66 @@
       <div class="tile"><small>Hassle score</small><b>${m.hassle}</b><span class="muted">lower = more relaxed</span></div></div>`;
   }
 
+  /* ---------- ways to save ---------- */
+  const SKIP_ACTS = ['cablecar', 'vinwonders', 'show', 'scuba', 'speedboat', 'parasail', 'halong', 'bana', 'tailor'];
+  const cheapestFlight = c => { const f = T.flights.find(x => x.id === c.flightId) || T.flights[0]; return T.flights.filter(x => x.arr === f.arr && x.dep === f.dep).sort((a, b) => pr('flight:' + a.id, a.pp[c.level]) - pr('flight:' + b.id, b.pp[c.level]))[0]; };
+  const SAVERS = [
+    { id: 'flight', icon: '✈️', keys: ['flightId'], t: c => 'Fly with ' + cheapestFlight(c).airline, d: 'The cheapest airline on the same route. Usually longer layovers — and get a real quote first.', apply: c => { c.flightId = cheapestFlight(c).id; } },
+    { id: 'hotel', icon: '🏨', keys: ['hotelLvl'], t: () => 'Simple, well-reviewed 3★ hotels', d: 'Clean room, good location, often still a pool — just fewer frills.', apply: c => { c.hotelLvl = 'budget'; } },
+    { id: 'food', icon: '🍜', keys: ['foodLvl'], t: () => 'Eat mostly local', d: 'Street food and family restaurants are the best food in Vietnam anyway; keep a couple of nice dinners.', apply: c => { c.foodLvl = 'local'; } },
+    { id: 'gala', icon: '🥂', keys: ['gala'], t: () => 'Pick a hotel without a New-Year gala fee', d: 'Small hotels rarely charge one. Ask before booking.', apply: c => { c.gala = false; } },
+    { id: 'peak', icon: '🎆', keys: ['stops'], t: () => 'Spend New Year in Saigon, beach afterwards', d: 'Moves your city nights to the start so the island nights fall after the 29 Dec – 2 Jan surcharge.', apply: c => { const city = c.stops.filter(x => !T.places[x.place].beach), beach = c.stops.filter(x => T.places[x.place].beach); const f = T.flights.find(x => x.id === c.flightId) || T.flights[0]; if (!city.length || !beach.length) return; const hc = city.filter(x => x.place === 'hcmc'); if (f.dep === 'hcmc' && hc.length && hc.reduce((n, x) => n + x.nights, 0) > 1) { const tot = city.reduce((a, x) => { const e = a.find(y => y.place === x.place); e ? e.nights += x.nights : a.push({ place: x.place, nights: x.nights }); return a; }, []); const h = tot.find(x => x.place === 'hcmc'); h.nights -= 1; c.stops = [...tot.filter(x => x.nights > 0), ...beach, { place: 'hcmc', nights: 1 }]; } else c.stops = [...city, ...beach]; } },
+    { id: 'legs', icon: '🚌', risky: true, keys: ['legMode'], t: () => 'Travel the cheapest way between places', d: 'Bus and ferry instead of flights and private cars. Much slower, and ferries can be cancelled in rough seas.', apply: c => { compute(c).legs.forEach(l => { const k = legKey(l.a, l.b); c.legMode[k] = [...l.opts].sort((a, b) => pr('leg:' + k + ':' + a.id, a.pp) - pr('leg:' + k + ':' + b.id, b.pp))[0].id; }); } },
+    { id: 'acts', icon: '🎟', keys: ['acts'], t: () => 'Skip the pricey attractions', d: 'Drop cable car, theme park, shows, scuba and speedboat; keep the snorkel trip, massages and food tour.', apply: c => { c.acts = c.acts.filter(a => !SKIP_ACTS.includes(a)); } },
+    { id: 'shop', icon: '🛍', keys: ['shopping'], t: () => 'Shopping allowance down to €50', d: 'Souvenirs are cheap; bargain from about half the first price.', apply: c => { c.shopping = Math.min(c.shopping, 50); } },
+    { id: 'ins', icon: '🩺', keys: ['insurance'], t: () => 'Use travel insurance you already have', d: 'Many credit cards and annual policies include it — check the cover is valid for Vietnam and 19 days.', apply: c => { c.insurance = false; } },
+    { id: 'res', icon: '🧯', keys: ['reservePct'], t: () => 'Smaller safety buffer (3%)', d: 'Only sensible once flights and hotels are booked at fixed prices.', apply: c => { c.reservePct = Math.min(c.reservePct, 3); } }
+  ];
+  const clone = o => JSON.parse(JSON.stringify(o));
+  function saverState(sv) {
+    const c = clone(calc); sv.apply(c);
+    const saving = compute(calc).total - compute(c).total;
+    return { saving, active: !!(calc.undo && calc.undo[sv.id]) };
+  }
+  function toggleSaver(id) {
+    const sv = SAVERS.find(x => x.id === id); if (!sv) return;
+    calc.undo = calc.undo || {};
+    if (calc.undo[id]) { Object.assign(calc, clone(calc.undo[id])); delete calc.undo[id]; }
+    else { const before = {}; sv.keys.forEach(k => before[k] = clone(calc[k])); sv.apply(calc); calc.undo[id] = before; }
+    calc.base = 'custom';
+  }
+  function saversHTML() {
+    const rows = SAVERS.map(sv => ({ sv, st: saverState(sv) })).filter(x => x.st.active || x.st.saving > 0.5);
+    const c = clone(calc); SAVERS.forEach(sv => { if (!sv.risky && !(calc.undo && calc.undo[sv.id])) sv.apply(c); });
+    const all = compute(c).total, now = compute(calc).total;
+    return `<div class="savers"><div class="head"><h3>💡 Ways to pay less</h3></div><p class="muted small">Tap one to switch it on and watch the total change. Tap again to undo.</p>
+      ${rows.map(({ sv, st }) => `<button class="saver ${st.active ? 'on' : ''}" data-saver="${sv.id}" aria-pressed="${st.active}"><span class="sv-ico">${st.active ? '✓' : sv.icon}</span><span class="sv-txt"><b>${esc(sv.t(calc))}</b><small>${esc(sv.d)}</small></span><span class="sv-amt">${st.active ? 'on · undo' : '−' + eur(st.saving)}</span></button>`).join('') || '<p class="muted small">Nothing left to cut — this is the lean version.</p>'}
+      ${now - all > 0.5 ? `<button class="btn small" data-saver="all">Switch on all the comfortable ones → ${eur(all)}</button>` : ''}
+      <details class="moretips"><summary>More ways to save that the calculator cannot count</summary><ul class="pros">${(T.saveTips || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></details></div>`;
+  }
+
+  /* ---------- hotels ---------- */
+  const hotelsFor = k => (T.hotels && T.hotels[k]) || [];
+  function hotelCard(h, k) {
+    return `<div class="card hotel"><div class="tip-top">${pill(h.tier)}<span class="status ${h.score ? 'good' : 'info'}">${h.score ? '★ ' + esc(h.score) : 'score not seen'}</span></div>
+      <h3>${esc(h.name)}</h3><p class="muted small">${esc(h.area)}${h.stars ? ' · ' + esc(h.stars) : ''}</p>
+      <div class="mode-price">${h.price ? '~' + eur(h.price) : '–'} <small>per night${h.priceNote ? ' · ' + esc(h.priceNote) : ''}</small></div>
+      <ul class="pros"><li>${esc(h.good)}</li></ul>${h.watch ? `<ul class="cons"><li>${esc(h.watch)}</li></ul>` : ''}
+      ${srcLinks(h.src)}${h.price && !PRINT ? `<div class="det-actions"><button class="btn small ${ov['hotel:' + k] === h.price ? 'primary' : ''}" data-usehotel="${k}" data-val="${h.price}">${ov['hotel:' + k] === h.price ? '✓ used in all calculations' : 'Use this price for ' + esc(T.places[k].short)}</button></div>` : ''}</div>`;
+  }
+  function hotelsMini(places) {
+    return places.filter(k => hotelsFor(k).length).map(k => `<h4>${T.places[k].emoji} ${esc(T.places[k].short)}</h4><ul class="hotelmini">${hotelsFor(k).map(h => `<li><b>${esc(h.name)}</b> <span class="muted">${esc(h.area)}</span><span>${h.score ? '★ ' + esc(h.score.split(' ')[0]) : ''} ${h.price ? '· ~' + eur(h.price) : ''}</span></li>`).join('')}</ul>`).join('');
+  }
+  function renderHotels() {
+    const pk = Object.keys(T.places).filter(k => hotelsFor(k).length);
+    const cur = views.hplace && pk.includes(views.hplace) ? views.hplace : pk[0];
+    if (!pk.length) { $('#hotels').innerHTML = '<h2>Where to stay</h2><p class="card">Hotel picks are being researched and will appear here shortly.</p>'; return; }
+    $('#hotels').innerHTML = `<div class="head"><div><h2>Where to stay</h2><p class="muted">Well-reviewed hotels for every stop, in three price classes. Scores and prices are as seen on ${esc(T.meta.updatedHuman)} and are not quotes for your nights — tap “Use this price” to put a hotel into every calculation, then replace it with the real quote.</p></div></div>
+      ${T.hotelNote ? `<div class="note"><p>${esc(T.hotelNote)}</p></div>` : ''}
+      ${PRINT ? '' : `<div class="chips">${pk.map(k => `<button class="chip btnchip ${k === cur ? 'on' : ''}" data-hplace="${k}">${T.places[k].emoji} ${esc(T.places[k].short)}</button>`).join('')}</div>`}
+      ${(PRINT ? pk : [cur]).map(k => `<h3>${T.places[k].emoji} ${esc(T.places[k].name)}</h3><p class="muted small">${esc(T.places[k].hotelNote || '')} Our default budget: ${eur(T.places[k].hotel.budget)} simple · ${eur(T.places[k].hotel.mid)} good · ${eur(T.places[k].hotel.nice)} nice per night.</p><div class="grid3">${hotelsFor(k).map(h => hotelCard(h, k)).join('')}</div>`).join('')}`;
+  }
+
   /* ---------- OVERVIEW ---------- */
   function renderOverview() {
     const all = T.scenarios.map(s => ({ s, r: compute(cfgFromScenario(s)) }));
@@ -242,6 +302,7 @@
     return `<div class="det-head"><span class="rid big">${s.id}</span><div><h2>${esc(s.title)}</h2><p class="muted">${esc(s.tagline)}</p></div></div>
       ${tiles(r)}
       <div class="two"><div><h3>Day plan</h3>${timelineHTML(r)}
+        ${hotelsMini([...new Set(r.timeline.map(t => t.place))]) ? `<h3>Where to stay</h3>${hotelsMini([...new Set(r.timeline.map(t => t.place))])}${PRINT ? '' : '<p class="small"><a href="#hotels" data-go="hotels">See all hotels with reviews →</a></p>'}` : ''}
         <h3>Why you'd love it</h3><ul class="pros">${s.pros.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
         <h3>What to watch out for</h3><ul class="cons">${s.cons.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
       <div><div class="head"><h3>Budget for two</h3>${PRINT ? '' : toggle(id, 'Numbers')}</div>
@@ -337,7 +398,7 @@
         <div class="ctl"><span>Food</span><div class="seg">${Object.keys(FOOD_LVLS).map(l => `<button data-fl="${l}" class="${calc.foodLvl === l ? 'on' : ''}">${FOOD_LVLS[l]}</button>`).join('')}</div></div>
         <table class="mini"><thead><tr><th></th><th>Hotel € / night</th><th>Food € / day for two</th></tr></thead><tbody>${used.map(k => `<tr><td>${P[k].emoji} ${esc(P[k].short)}</td>
           <td><input type="number" min="0" step="1" data-ov="hotel:${k}" value="${has('hotel:' + k) ? ov['hotel:' + k] : ''}" placeholder="${P[k].hotel[calc.hotelLvl]}"></td><td><input type="number" min="0" step="1" data-ov="food:${k}" value="${has('food:' + k) ? ov['food:' + k] : ''}" placeholder="${P[k].food[calc.foodLvl]}"></td></tr>`).join('')}</tbody></table>
-        <p class="muted small">Grey numbers are our researched defaults — type over them with a real price (0 = free, e.g. staying with friends). Every price can be changed on the <a href="#mine" data-go="mine">Our prices</a> page.</p>
+        <p class="muted small">Grey numbers are our researched defaults — type over them with a real price (0 = free, e.g. staying with friends). Pick a real hotel on the <a href="#hotels" data-go="hotels">Hotels</a> page, or change any price on <a href="#mine" data-go="mine">Our prices</a>.</p>
         <label class="check"><input type="checkbox" id="c-peak" ${calc.peak ? 'checked' : ''}> Add the New-Year surcharge to hotel nights 29 Dec – 2 Jan</label>
         ${used.includes('pq') ? `<label class="check"><input type="checkbox" id="c-gala" ${calc.gala ? 'checked' : ''}> ${esc(T.fixed.gala.label)} (${eur(pr('fixed:gala', T.fixed.gala.for2))})</label>` : ''}</div>
       <div class="card"><h3>6 · Things to do</h3>${used.map(k => `<h4>${P[k].emoji} ${esc(P[k].name)}</h4>${T.activities.filter(a => a.place === k).map(a => `<label class="check"><input type="checkbox" data-act="${a.id}" ${calc.acts.includes(a.id) ? 'checked' : ''}><span>${esc(a.name)} <small>${esc(a.note || '')}</small></span><b>${eur(pr('act:' + a.id, a.for2))}</b></label>`).join('')}`).join('')}</div>
@@ -356,6 +417,7 @@
       <div class="gauge" data-tip="${esc(eur(res.total) + ' of ' + eur(b) + ' ceiling')}" tabindex="0"><div class="gauge-band" style="left:${a / max * 100}%;width:${(b - a) / max * 100}%"></div><div class="stack" style="width:${res.total / max * 100}%">${CATS.filter(c => res.cats[c.k] > 0).map(c => `<span style="flex:${res.cats[c.k]};background:${c.c}" data-tip="${esc(c.n + ': ' + eur(res.cats[c.k]))}"></span>`).join('')}</div><span class="ref" style="left:${b / max * 100}%"></span></div>
       <div class="gauge-lbl"><span>${eur(a)}–${eur(b)} budget shaded</span><span>${res.total <= b ? eur(b - res.total) + ' left' : eur(res.total - b) + ' over'}</span></div>
       <div class="minitiles"><span>🏖 <b>${res.m.beachNights}</b> beach nights</span><span>🧳 <b>${res.m.moves}</b> check-ins</span><span>🕑 <b>${hrs(res.m.transitH)}</b> in transit</span><span>😌 hassle <b>${res.m.hassle}</b></span></div>
+      ${saversHTML()}
       <div class="head"><h3>Breakdown</h3>${toggle('calcres', 'Numbers')}</div>
       ${showD('calcres') ? linesHTML(res) : catBars(res)}
       <h3>Your days</h3>${timelineHTML(res)}
@@ -422,7 +484,7 @@
   }
 
   /* ---------- routing & events ---------- */
-  const TABS = { overview: renderOverview, routes: renderRoutes, compare: renderCompare, flights: renderFlights, around: renderAround, calc: renderCalc, mine: renderMine, tips: renderTips, prep: renderPrep };
+  const TABS = { overview: renderOverview, routes: renderRoutes, compare: renderCompare, flights: renderFlights, around: renderAround, hotels: renderHotels, calc: renderCalc, mine: renderMine, tips: renderTips, prep: renderPrep };
   let tab = 'overview';
   function go(t, keepScroll) {
     if (!TABS[t]) t = 'overview'; tab = t;
@@ -437,7 +499,10 @@
   document.addEventListener('click', e => {
     const t = e.target.closest('button, [data-open], a'); if (!t) return;
     const d = t.dataset;
-    if (d.go) { if (location.hash.startsWith('#plan=')) history.replaceState(null, '', '#'); return go(d.go); }
+    if (d.saver) { if (d.saver === 'all') SAVERS.forEach(sv => { if (!sv.risky && !(calc.undo && calc.undo[sv.id]) && saverState(sv).saving > 0.5) toggleSaver(sv.id); }); else toggleSaver(d.saver); saveCalc(); return renderCalc(); }
+    if (d.usehotel) { const k = 'hotel:' + d.usehotel; if (ov[k] === +d.val) delete ov[k]; else ov[k] = +d.val; store.set('ov', ov); return rerender(); }
+    if (d.hplace) { views.hplace = d.hplace; return renderHotels(); }
+    if (d.go) { e.preventDefault(); if (location.hash.startsWith('#plan=')) history.replaceState(null, '', '#'); return go(d.go); }
     if (d.close !== undefined) return $('#dlg').close();
     if (d.tocalc) { calc = cfgFromScenario(scen(d.tocalc)); saveCalc(); $('#dlg').close(); return go('calc'); }
     if (d.open) return openDetail(d.open);

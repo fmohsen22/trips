@@ -338,6 +338,17 @@
       { topic: 'Health', echo: 'several', title: 'Ask a travel clinic about hepatitis A', text: 'Recommended for nearly all travellers to Vietnam; typhoid and others depend on your plans. Malaria is not a concern on this route.', src: [S('ADAC: Vietnam health', 'https://www.adac.de/gesundheit/reiselaender/vietnam/')] }
     ],
 
+    saveTips: [
+      'Shift the flight by a day or two: the same airline showed €1,200 on 28 Dec and €1,690 on 26 Dec.',
+      'Book hotel rates with breakfast included — it is often only €3–5 more and saves a meal a day.',
+      'Book the Saigon–Phu Quoc flights early with Vietnam Airlines or Sun PhuQuoc Airways (bag included) rather than adding bags to a low-cost fare later.',
+      'Split a long island stay: a simple place for the first nights, a nicer beachfront one for the last few.',
+      'Use Grab or Xanh SM instead of hotel cars — hotel transfers often cost double.',
+      'Withdraw cash at VPBank or ACB machines and always decline the machine’s currency conversion.',
+      'Get massages, laundry and tours in town rather than through the resort.',
+      'Travelling from Munich instead of Vienna can be cheaper: Vietnam Airlines flies nonstop from there.'
+    ],
+
     checklist: [
       { icon: '✈️', t: 'Book first', items: [
         { t: 'Search the real flight price for 28 Dec → 15 Jan', d: 'Google Flights or Skyscanner, with one checked bag each. Try ±2 days. Then type it into “Our prices”.' },
