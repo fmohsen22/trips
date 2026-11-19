@@ -42,7 +42,7 @@
     set(k, v) { try { localStorage.setItem(PFX + k, JSON.stringify(v)); if (SYNC_KEYS.includes(k)) { localStorage.setItem('smv.ts', String(Date.now())); schedulePush(); } } catch (e) { } }
   };
   /* ---------- shared state (both travellers see the same choices) ---------- */
-  const SYNC_KEYS = ['calc', 'ov', 'hsel', 'hprice', 'hconf', 'offers', 'fx', 'myh', 'gf', 'd0', 'd1', 'picked', 'todo'];
+  const SYNC_KEYS = ['calc', 'ov', 'hsel', 'hprice', 'hconf', 'offers', 'ofp', 'fx', 'myh', 'gf', 'd0', 'd1', 'picked', 'todo'];
   const API = '/api/state?trip=' + encodeURIComponent(M.key);
   let syncOn = false, pushT = null;
   const localTs = () => { try { return +localStorage.getItem('smv.ts') || 0; } catch (e) { return 0; } };
@@ -568,10 +568,13 @@
   let myOffers = (store.get('offers', []) || []).filter(o => o && typeof o.company === 'string').map(o => Object.assign(o, { mine: true, url: /^https?:\/\//i.test(o.url || '') ? o.url : '' }));
   let fx = Object.assign({ EUR: 1, GBP: 1.15, USD: 0.88 }, M.fx || {}, store.get('fx', {}) || {});
   const MEALS = { none: ['No meals', 1], breakfast: ['Breakfast only', 0.75], some: ['Some meals', 0.5], all: ['All meals', 0.1] };
+  let ofp = store.get('ofp', {}) || {};
   const allOffers = () => (T.offers || []).concat(myOffers);
+  const offerPrice = o => typeof o.price === 'number' ? o.price : (typeof ofp[o.id] === 'number' ? ofp[o.id] : null);
   function offerCalc(o) {
     const P = T.places[HUB], f = T.flights.find(x => x.id === gf) || T.flights[0], n = o.nights || tripN, inc = o.incl || {};
-    const priceEur = o.price * (fx[o.cur] || 1), add = [];
+    const op = offerPrice(o), priceEur = (op || 0) * (fx[o.cur] || 1), add = [];
+    (o.extra || []).forEach(x => add.push([x.label, x.for2, x.note || '']));
     if (!inc.flight) { const pp = (has('flightown') ? ov.flightown : pr('flight:' + f.id, f.pp.typ)) + (o.openJaw && M.openJaw[o.openJaw] ? M.openJaw[o.openJaw] : 0); add.push(['Flights from ' + M.home, pp * 2, (has('flightown') ? 'our own flight price' : f.airline) + (o.openJaw && M.openJaw[o.openJaw] ? ', flying home from ' + T.places[o.openJaw].short : '')]); }
     if (!inc.hotels) add.push(['Hotels', n * P.hotel[calc.hotelLvl], n + ' nights at our typical price']);
     const mf = (MEALS[inc.meals] || MEALS.none)[1]; if (mf > 0) add.push(['Meals not included', n * pr('food:' + HUB, P.food[calc.foodLvl]) * mf, Math.round(mf * 100) + '% of our food budget for ' + n + ' days']);
@@ -582,31 +585,31 @@
     if (!inc.sim && calc.sim) add.push([T.fixed.sim.label, pr('fixed:sim', T.fixed.sim.for2), '']);
     add.push(['Shopping', calc.shopping, 'same allowance as our plan']);
     const sub = priceEur + add.reduce((a, x) => a + x[1], 0), res = sub * calc.reservePct / 100; add.push([calc.reservePct + '% reserve', res, 'same buffer as our plan']);
-    return { priceEur, add, total: sub + res, n };
+    return { priceEur, add, total: sub + res, n, missing: op == null };
   }
   function renderOffers() {
     const mineR = compute(calc), offers = allOffers().map(o => ({ o, c: offerCalc(o) }));
     const yes = v => v ? '<span class="status good">✓ included</span>' : '<span class="status warn">not included</span>';
     $('#offers').innerHTML = `<div class="head"><div><h2>Offers from travel companies</h2><p class="muted">Package offers next to our own plan. A package rarely includes everything, so we add what is missing (flights, meals, visa…) with the same numbers as in our plan — only then are the totals comparable.</p></div></div>
-      ${offers.length ? `<div class="card"><h3>Total for two, like for like</h3>${barChart([{ label: '★ Our own plan', v: mineR.total, hl: true, c: 'var(--s1)' }].concat(offers.map(x => ({ label: x.o.company, v: x.c.total, c: 'var(--s2)', tip: x.o.company + ' — ' + x.o.name + ': ' + eur(x.c.total) }))), { band: [M.budgetMin, M.budgetMax] })}
+      ${offers.length ? `<div class="card"><h3>Total for two, like for like</h3>${barChart([{ label: '★ Our own plan', v: mineR.total, hl: true, c: 'var(--s1)' }].concat(offers.filter(x => !x.c.missing).map(x => ({ label: x.o.company, v: x.c.total, c: 'var(--s2)', tip: x.o.company + ' — ' + x.o.name + ': ' + eur(x.c.total) }))), { band: [M.budgetMin, M.budgetMax] })}
         <div class="tablewrap flat"><table class="mini sumtbl"><thead><tr><th></th><th>★ Our own plan</th>${offers.map(x => `<th>${esc(x.o.company)}</th>`).join('')}</tr></thead><tbody>
         <tr><td>What it is</td><td>${esc(planName())}</td>${offers.map(x => `<td>${esc(x.o.name)}</td>`).join('')}</tr>
         <tr><td>Nights</td><td>${mineR.m.nights}</td>${offers.map(x => `<td>${x.c.n}</td>`).join('')}</tr>
         <tr><td>Beach nights</td><td>${mineR.m.beachNights}</td>${offers.map(x => `<td>${x.o.beachNights == null ? '?' : x.o.beachNights}</td>`).join('')}</tr>
         <tr><td>Hotels</td><td>${esc(HOTEL_LVLS[calc.hotelLvl])}</td>${offers.map(x => `<td>${esc(x.o.hotelClass || '?')}</td>`).join('')}</tr>
-        <tr><td>Price asked</td><td>–</td>${offers.map(x => `<td>${x.o.cur !== 'EUR' ? esc(x.o.cur) + ' ' + Math.round(x.o.price).toLocaleString('en-US') + ' = ' : ''}<b>${eur(x.c.priceEur)}</b></td>`).join('')}</tr>
+        <tr><td>Price asked</td><td>–</td>${offers.map(x => x.c.missing ? '<td><span class="status warn">price missing — type it on the card</span></td>' : `<td>${x.o.cur !== 'EUR' ? esc(x.o.cur) + ' ' + Math.round(offerPrice(x.o)).toLocaleString('en-US') + ' = ' : ''}<b>${eur(x.c.priceEur)}</b></td>`).join('')}</tr>
         <tr><td>+ what is missing</td><td>–</td>${offers.map(x => `<td>${eur(x.c.total - x.c.priceEur)}</td>`).join('')}</tr>
-        <tr><td><b>Comparable total</b></td><td><b>${eur(mineR.total)}</b></td>${offers.map(x => `<td><b>${eur(x.c.total)}</b></td>`).join('')}</tr>
-        <tr><td>Against our plan</td><td>–</td>${offers.map(x => { const d = x.c.total - mineR.total; return `<td><span class="status ${d <= 0 ? 'good' : 'bad'}">${d <= 0 ? '▼ ' + eur(-d) + ' cheaper' : '▲ ' + eur(d) + ' dearer'}</span></td>`; }).join('')}</tr>
-        <tr><td>Per night</td><td>${eur(mineR.total / Math.max(1, mineR.m.nights))}</td>${offers.map(x => `<td>${eur(x.c.total / x.c.n)}</td>`).join('')}</tr></tbody></table></div>
+        <tr><td><b>Comparable total</b></td><td><b>${eur(mineR.total)}</b></td>${offers.map(x => `<td><b>${x.c.missing ? '?' : eur(x.c.total)}</b></td>`).join('')}</tr>
+        <tr><td>Against our plan</td><td>–</td>${offers.map(x => { if (x.c.missing) return '<td>?</td>'; const d = x.c.total - mineR.total; return `<td><span class="status ${d <= 0 ? 'good' : 'bad'}">${d <= 0 ? '▼ ' + eur(-d) + ' cheaper' : '▲ ' + eur(d) + ' dearer'}</span></td>`; }).join('')}</tr>
+        <tr><td>Per night</td><td>${eur(mineR.total / Math.max(1, mineR.m.nights))}</td>${offers.map(x => `<td>${x.c.missing ? '?' : eur(x.c.total / x.c.n)}</td>`).join('')}</tr></tbody></table></div>
         <p class="muted small">Our own plan is whatever is chosen under Flights, Routes and Hotels. Exchange rates used: £1 = €<input class="fx" type="number" step="0.01" min="0" data-fx="GBP" value="${fx.GBP}"> · $1 = €<input class="fx" type="number" step="0.01" min="0" data-fx="USD" value="${fx.USD}"> — change them to today’s rate.</p></div>` : '<p class="card">No offers yet — add the first one below.</p>'}
       <div class="grid2">${offers.map(({ o, c }) => `<div class="card offer"><div class="tip-top">${pill(o.mine ? 'added by us' : 'offer', o.mine ? 'accent' : '')}<span class="status info">${esc(o.dates || c.n + ' nights')}</span></div>
         <h3>${esc(o.company)} — ${esc(o.name)}</h3>${o.url ? `<p class="small"><a href="${esc(o.url)}" target="_blank" rel="noopener">Open the offer ↗</a></p>` : ''}
-        <div class="mode-price">${eur(c.priceEur)} <small>asked for two${o.cur !== 'EUR' ? ' (' + esc(o.cur) + ' ' + Math.round(o.price).toLocaleString('en-US') + ')' : ''}${o.priceNote ? ' · ' + esc(o.priceNote) : ''}</small></div>
+        ${typeof o.price === 'number' ? `<div class="mode-price">${eur(c.priceEur)} <small>asked for two${o.cur !== 'EUR' ? ' (' + esc(o.cur) + ' ' + Math.round(o.price).toLocaleString('en-US') + ')' : ''}${o.priceNote ? ' · ' + esc(o.priceNote) : ''}</small></div>` : `<label class="field"><b>Price for two in ${esc(o.cur)}</b> — ${esc(o.priceNote || 'not shown in the offer we received')}${PRINT ? '' : `<input type="number" min="0" step="1" data-ofprice="${esc(o.id)}" class="${c.missing ? '' : 'set'}" value="${c.missing ? '' : ofp[o.id]}" placeholder="type the total from the offer">`}</label>${c.missing ? '' : `<div class="mode-price">${eur(c.priceEur)} <small>for two</small></div>`}`}
         <dl class="incl"><dt>Flights from ${esc(M.home)}</dt><dd>${yes(o.incl.flight)}</dd><dt>Hotels</dt><dd>${yes(o.incl.hotels)} ${esc(o.hotelClass || '')}</dd><dt>Travel inside the country</dt><dd>${yes(o.incl.domestic)}</dd><dt>Meals</dt><dd>${esc((MEALS[o.incl.meals] || MEALS.none)[0])}</dd><dt>Activities & guide</dt><dd>${yes(o.incl.activities)}</dd><dt>Visa</dt><dd>${yes(o.incl.visa)}</dd><dt>Insurance</dt><dd>${yes(o.incl.insurance)}</dd></dl>
         ${o.includes ? `<h4>What you get</h4><ul class="pros">${o.includes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${o.watch ? `<h4>What to check</h4><ul class="cons">${o.watch.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${o.note ? `<p>${esc(o.note)}</p>` : ''}
         <details class="line"><summary><span>What we add to compare fairly</span><b>${eur(c.total - c.priceEur)}</b></summary><div class="line-body">${c.add.map(a => `<div class="sub"><div><b>${esc(a[0])}</b><span>${eur(a[1])}</span></div><p>${esc(a[2])}</p></div>`).join('')}</div></details>
-        <div class="line total"><span>Comparable total for two</span><b>${eur(c.total)}</b></div>
+        <div class="line total"><span>Comparable total for two</span><b>${c.missing ? 'price missing' : eur(c.total)}</b></div>
         ${o.mine && !PRINT ? `<div class="det-actions"><button class="btn small" data-offerdel="${esc(o.id)}">Delete</button></div>` : ''}</div>`).join('')}</div>
       ${PRINT ? '' : `<div class="card addhotel"><h3>➕ Add an offer from another company</h3><div class="addgrid">
         <label class="field">Company<input type="text" id="of-company" maxlength="60" placeholder="e.g. TUI"></label>
@@ -753,6 +756,7 @@
     if (d.cmp) { compareSel = t.checked ? compareSel.concat(d.cmp) : compareSel.filter(x => x !== d.cmp); store.set('cmp', compareSel); return renderCompare(); }
     if (d.todo) { const o = store.get('todo', {}); o[d.todo] = t.checked; return store.set('todo', o); }
     if (d.hstay) return renderHotels();
+    if (d.ofprice) { const v = +t.value; if (t.value === '' || !(v > 0)) delete ofp[d.ofprice]; else ofp[d.ofprice] = v; store.set('ofp', ofp); return renderOffers(); }
     if (d.fx) { const v = +t.value; if (v > 0) { fx[d.fx] = v; store.set('fx', { GBP: fx.GBP, USD: fx.USD }); } return renderOffers(); }
     if (d.hsel) { if (t.value) hsel[d.hsel] = t.value; else delete hsel[d.hsel]; syncHotel(d.hsel); return renderHotels(); }
     if (d.stop !== undefined) { calc.stops[+d.stop].place = t.value; custom(); saveCalc(); return renderCalc(); }
