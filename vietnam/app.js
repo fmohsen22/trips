@@ -22,7 +22,7 @@
   ];
   const LEVELS = { low: 'Lucky / best case', typ: 'Typical', high: 'Peak / worst case' };
   const HOTEL_LVLS = { budget: 'Simple 3★', mid: 'Good 3–4★', nice: 'Nice 4–5★' };
-  const FOOD_LVLS = { local: 'Local & street food', mixed: 'Mixed', tourist: 'Restaurants & resort' };
+  const FOOD_LVLS = { local: 'Street food only', mixed: 'Mostly local', tourist: 'Restaurants & resort' };
 
   /* ---------- dates ---------- */
   const D0 = Date.UTC(2026, 11, 29);
@@ -207,7 +207,7 @@
   const SAVERS = [
     { id: 'flight', icon: '✈️', keys: ['flightId'], t: c => 'Fly with ' + cheapestFlight(c).airline, d: 'The cheapest airline on the same route. Usually longer layovers — and get a real quote first.', apply: c => { c.flightId = cheapestFlight(c).id; } },
     { id: 'hotel', icon: '🏨', keys: ['hotelLvl'], t: () => 'Simple, well-reviewed 3★ hotels', d: 'Clean room, good location, often still a pool — just fewer frills.', apply: c => { c.hotelLvl = 'budget'; } },
-    { id: 'food', icon: '🍜', keys: ['foodLvl'], t: () => 'Eat mostly local', d: 'Street food and family restaurants are the best food in Vietnam anyway; keep a couple of nice dinners.', apply: c => { c.foodLvl = 'local'; } },
+    { id: 'food', icon: '🍜', keys: ['foodLvl'], t: () => 'Street food for most meals', d: 'Pho, banh mi and market stalls are the best food in Vietnam anyway; keep a couple of nice dinners.', apply: c => { c.foodLvl = 'local'; } },
     { id: 'gala', icon: '🥂', keys: ['gala'], t: () => 'Pick a hotel without a New-Year gala fee', d: 'Small hotels rarely charge one. Ask before booking.', apply: c => { c.gala = false; } },
     { id: 'peak', icon: '🎆', keys: ['stops'], t: () => 'Spend New Year in Saigon, beach afterwards', d: 'Moves your city nights to the start so the island nights fall after the 29 Dec – 2 Jan surcharge.', apply: c => { const city = c.stops.filter(x => !T.places[x.place].beach), beach = c.stops.filter(x => T.places[x.place].beach); const f = T.flights.find(x => x.id === c.flightId) || T.flights[0]; if (!city.length || !beach.length) return; const hc = city.filter(x => x.place === 'hcmc'); if (f.dep === 'hcmc' && hc.length && hc.reduce((n, x) => n + x.nights, 0) > 1) { const tot = city.reduce((a, x) => { const e = a.find(y => y.place === x.place); e ? e.nights += x.nights : a.push({ place: x.place, nights: x.nights }); return a; }, []); const h = tot.find(x => x.place === 'hcmc'); h.nights -= 1; c.stops = [...tot.filter(x => x.nights > 0), ...beach, { place: 'hcmc', nights: 1 }]; } else c.stops = [...city, ...beach]; } },
     { id: 'legs', icon: '🚌', risky: true, keys: ['legMode'], t: () => 'Travel the cheapest way between places', d: 'Bus and ferry instead of flights and private cars. Much slower, and ferries can be cancelled in rough seas.', apply: c => { compute(c).legs.forEach(l => { const k = legKey(l.a, l.b); c.legMode[k] = [...l.opts].sort((a, b) => pr('leg:' + k + ':' + a.id, a.pp) - pr('leg:' + k + ':' + b.id, b.pp))[0].id; }); } },
@@ -308,7 +308,7 @@
       <h2>The short version</h2><div class="grid3">${T.headlines.map(h => `<div class="card"><div class="ico">${h.icon}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p></div>`).join('')}</div>
       <h2>All routes at a glance</h2>
       ${barChart(all.map(x => ({ label: x.s.id + '  ' + x.s.short, v: x.r.total, hl: x.s.id === T.meta.recommended, c: x.s.id === T.meta.recommended ? 'var(--s1)' : 'var(--s1-soft)' })), { band: [T.meta.budgetMin, T.meta.budgetMax] })}
-      <p class="muted">Typical prices, good 3–4★ hotels, mixed food. Change any assumption in the calculator.</p>`;
+      <p class="muted">Typical flight prices, good 3–4★ hotels, mostly local food. Change any assumption in the calculator.</p>`;
   }
 
   /* ---------- ROUTES ---------- */
