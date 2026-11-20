@@ -117,8 +117,8 @@
     stops.forEach(s => {
       const p = P[s.place];
       const hk = 'hotel:' + s.place, rate = pr(hk, p.hotel[cfg.hotelLvl]);
-      const a0 = isoAdd(d0, night), b0 = isoAdd(d0, night + s.nights), selH = useOv && hsel[s.place] ? findHotel(s.place, hsel[s.place]) : null, st = selH && selH.stay, cf0 = selH && hconf[selH.id];
-      const cf = cf0 && cf0.a === a0 && cf0.b === b0 ? cf0 : (st && st.a === a0 && st.b === b0 ? st : cf0);
+      const a0 = isoAdd(d0, night), b0 = isoAdd(d0, night + s.nights), selH = useOv && hsel[s.place] ? findHotel(s.place, hsel[s.place]) : null, st = staysOf(selH)[0], cf0 = selH && hconf[selH.id];
+      const cf = cf0 && cf0.a === a0 && cf0.b === b0 ? cf0 : (stayFor(selH, a0, b0) || cf0);
       hStops++;
       if (cf && cf.a === a0 && cf.b === b0 && typeof cf.total === 'number') {
         hConf++;
@@ -304,6 +304,8 @@
   const hPrice = h => typeof hprice[h.id] === 'number' ? hprice[h.id] : h.price;
   const findHotel = (k, id) => hotelsFor(k).find(h => h.id === id);
   function syncHotel(k) { const h = findHotel(k, hsel[k]); if (h && typeof hPrice(h) === 'number') ov['hotel:' + k] = hPrice(h); else { delete ov['hotel:' + k]; if (!h) delete hsel[k]; } store.set('ov', ov); store.set('hsel', hsel); }
+  const staysOf = h => h ? (h.stays || (h.stay ? [h.stay] : [])) : [];
+  const stayFor = (h, a, b) => staysOf(h).find(x => x.a === a && x.b === b) || null;
   function stayDates(k) { const t = compute(calc).timeline.find(x => x.place === k); return t ? { a: isoAdd(d0, t.from), b: isoAdd(d0, t.to), n: t.nights } : null; }
   function bookingUrl(q, k) { const sd = stayDates(k); return 'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(q) + (sd ? '&checkin=' + sd.a + '&checkout=' + sd.b : '') + '&group_adults=2&no_rooms=1'; }
   function hotelCard(h, k) {
@@ -311,7 +313,7 @@
     return `<div class="card hotel ${on ? 'chosen' : ''}"><div class="tip-top">${pill(h.mine ? 'added by us' : ({ simple: 'simple · good value', good: 'good 3–4★', nice: 'nice 4–5★' }[h.tier] || h.tier), h.mine ? 'accent' : '')}<span class="status ${h.score ? 'good' : 'info'}">${h.score ? '★ ' + esc(h.score) : h.mine ? 'our own find' : 'score not seen'}</span></div>
       <h3>${esc(h.name)}</h3><p class="muted small">${esc(h.area || T.places[k].short)}${h.stars ? ' · ' + esc(h.stars) : ''}${h.breakfast ? ' · ' + esc(h.breakfast) : ''}</p>
       ${h.good ? `<ul class="pros"><li>${esc(h.good)}</li></ul>` : ''}${h.watch ? `<ul class="cons"><li>${esc(h.watch)}</li></ul>` : ''}
-      ${(() => { const sd = stayDates(k), c0 = hconf[h.id], cf = sd && c0 && c0.a === sd.a && c0.b === sd.b ? c0 : (sd && h.stay && h.stay.a === sd.a && h.stay.b === sd.b ? h.stay : c0), real = sd && cf && cf.a === sd.a && cf.b === sd.b;
+      ${(() => { const sd = stayDates(k), c0 = hconf[h.id], cf = sd && c0 && c0.a === sd.a && c0.b === sd.b ? c0 : (sd && stayFor(h, sd.a, sd.b) ? stayFor(h, sd.a, sd.b) : c0), real = sd && cf && cf.a === sd.a && cf.b === sd.b;
         const seen = typeof h.price === 'number' ? `<p class="muted small">On other dates we saw about ${eur(h.price)} a night${h.priceNote ? ' (' + esc(h.priceNote) + ')' : ''} — not a price for our nights.</p>` : '';
         if (PRINT) return `<div class="mode-price">${real ? eur(cf.total) + ' <small>real total for our stay</small>' : typeof p === 'number' ? '~' + eur(p) + ' <small>per night, other dates</small>' : '–'}</div>`;
         if (!sd) return seen + `<label class="field">Price per night €<input type="number" min="0" step="1" data-hprice="${esc(h.id)}" data-hk="${k}" value="${typeof hprice[h.id] === 'number' ? hprice[h.id] : ''}" placeholder="not on our route"></label>`;
