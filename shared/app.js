@@ -176,6 +176,8 @@
   if (!calc) calc = store.get('calc', null);
   if (!calc || !Array.isArray(calc.stops)) calc = cfgFromScenario(scen(T.meta.recommended));
   calc.legMode = calc.legMode || {};
+  // a saved plan that still names a route follows that route's current definition
+  if (calc.base !== 'custom' && scen(calc.base)) { const sc = scen(calc.base), want = scaleStops(sc.stops, tripN); if (JSON.stringify(want) !== JSON.stringify(calc.stops)) { calc.stops = want; calc.openJaw = sc.openJaw || null; store.set('calc', calc); } }
   let mood = 'typ';
   let compareSel = store.get('cmp', T.scenarios.map(s => s.id).concat('mine'));
   const views = {};
