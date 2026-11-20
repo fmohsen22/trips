@@ -438,20 +438,22 @@
 
   /* ---------- COMPARE ---------- */
   function renderCompare() {
+    const orows = allOffers().map(o => ({ o, c: offerCalc(o) }));
     const rows = T.scenarios.filter(s => compareSel.includes(s.id)).map(s => ({ id: s.id, label: s.id + '  ' + s.short, r: compute(cfgFromScenario(s), mood) }));
     if (compareSel.includes('mine')) rows.push({ id: 'mine', label: '★  Our own plan', r: compute(calc, mood === 'typ' ? null : mood) });
     const best = (fn, min = true) => { const v = rows.map(fn); return min ? Math.min(...v) : Math.max(...v); };
     const cell = (v, b, txt) => `<td class="${v === b ? 'best' : ''}">${txt}</td>`;
     const bT = best(x => x.r.total), bB = best(x => x.r.m.beachNights, false), bM = best(x => x.r.m.moves), bH = best(x => x.r.m.transitH), bS = best(x => x.r.m.hassle);
-    $('#compare').innerHTML = `<div class="head"><div><h2>Compare everything</h2><p class="muted">Pick the routes to compare. “Our own plan” is whatever is currently in the calculator.</p></div>${PRINT ? '' : toggle('compare', 'Table')}</div>
+    $('#compare').innerHTML = `<div class="head"><div><h2>Compare everything</h2><p class="muted">Pick the routes to compare. “Our own plan” is whatever is currently in the calculator. Packages from travel companies are listed at the end, marked 📦.</p></div>${PRINT ? '' : toggle('compare', 'Table')}</div>
       <div class="controls"><div class="chips">${T.scenarios.map(s => `<label class="chip"><input type="checkbox" data-cmp="${s.id}" ${compareSel.includes(s.id) ? 'checked' : ''}>${s.id} ${esc(s.short)}</label>`).join('')}<label class="chip"><input type="checkbox" data-cmp="mine" ${compareSel.includes('mine') ? 'checked' : ''}>★ Our own plan</label></div>
       ${tripCtl()}<div class="ctl"><span>Flight prices:</span><div class="seg" id="mood">${Object.keys(LEVELS).map(l => `<button data-mood="${l}" class="${mood === l ? 'on' : ''}">${LEVELS[l]}</button>`).join('')}</div></div></div>
       ${!rows.length ? '<p class="card">Select at least one route above.</p>' : ''}
       ${rows.length && showD('compare') ? `<div class="tablewrap"><table class="tbl cmp"><thead><tr><th>Route</th><th>Total for two</th><th>Budget</th><th>Beach nights</th><th>Hotel check-ins</th><th>Travel inside the country</th><th>Hassle score</th><th>Long-haul flights</th></tr></thead><tbody>
         ${rows.map(x => `<tr><td><b>${esc(x.label)}</b></td>${cell(x.r.total, bT, eur(x.r.total))}<td>${budgetBadge(x.r.total)}</td>${cell(x.r.m.beachNights, bB, x.r.m.beachNights)}${cell(x.r.m.moves, bM, x.r.m.moves)}${cell(x.r.m.transitH, bH, hrs(x.r.m.transitH))}${cell(x.r.m.hassle, bS, x.r.m.hassle)}<td>${hrs(x.r.m.intlH)}<br><small>${esc(x.r.flight.airline)}</small></td></tr>`).join('')}
-        </tbody></table></div><p class="muted small">Green cells = best in that column. Hassle score = one point per extra hotel move plus the difficulty of each journey (flight 1–2, bus + ferry 4, long train 4–5).</p>` : ''}
+        ${orows.map(x => `<tr class="pkg"><td><b>📦 ${esc(x.o.company)}</b><br><small>${esc(x.o.name)}</small></td><td>${x.c.missing ? '<span class="status warn">price missing</span>' : '<b>' + eur(x.c.total) + '</b><br><small>package ' + eur(x.c.priceEur) + ' + ' + eur(x.c.total - x.c.priceEur) + ' on top</small>'}</td><td>${x.c.missing ? '' : budgetBadge(x.c.total)}</td><td>${x.o.beachNights == null ? 'not stated' : x.o.beachNights}</td><td colspan="3"><small>${esc(x.o.hotelClass || '')} · ${x.c.n} nights · ${esc(x.o.dates || '')}</small></td><td><small>${x.o.incl.flight ? 'flights in the package' : 'flights not in the package — ours added'}</small></td></tr>`).join('')}
+        </tbody></table></div>${orows.length ? '<p class="small">📦 = package from a travel company, with everything it does not cover added on top. <a href="#offers" data-go="offers">See the line-by-line comparison on the Offers page →</a></p>' : ''}<p class="muted small">Green cells = best in that column. Hassle score = one point per extra hotel move plus the difficulty of each journey (flight 1–2, bus + ferry 4, long train 4–5).</p>` : ''}
       ${rows.length && showV('compare') ? `<div class="grid2">
-        <div class="card"><h3>Total cost for two</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.total })), { band: [T.meta.budgetMin, T.meta.budgetMax] })}</div>
+        <div class="card"><h3>Total cost for two</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.total })).concat(orows.filter(x => !x.c.missing).map(x => ({ label: '📦 ' + x.o.company, v: x.c.total, c: 'var(--s2)' }))), { band: [T.meta.budgetMin, T.meta.budgetMax] })}</div>
         <div class="card"><h3>Where the money goes</h3>${stackChart(rows.map(x => ({ label: x.label, total: x.r.total, cats: x.r.cats })), { ref: T.meta.budgetMax })}</div>
         <div class="card"><h3>Hours spent travelling inside the country</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.m.transitH })), { fmt: hrs, c: 'var(--s2)' })}</div>
         <div class="card"><h3>Nights by the beach</h3>${barChart(rows.map(x => ({ label: x.label, v: x.r.m.beachNights })), { fmt: v => v + ' nights', c: 'var(--s3)', max: tripN })}</div>
