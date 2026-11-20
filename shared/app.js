@@ -585,7 +585,12 @@
     if (!inc.sim && calc.sim) add.push([T.fixed.sim.label, pr('fixed:sim', T.fixed.sim.for2), '']);
     add.push(['Shopping', calc.shopping, 'same allowance as our plan']);
     const sub = priceEur + add.reduce((a, x) => a + x[1], 0), res = sub * calc.reservePct / 100; add.push([calc.reservePct + '% reserve', res, 'same buffer as our plan']);
-    return { priceEur, add, total: sub + res, n, missing: op == null };
+    let diy = null;
+    if (o.diy) { const xl = (o.extra || []).map(x => x.label), lines = o.diy.lines.map(x => [x.l, x.v, x.n || '']);
+      if (o.diy.flight) { const pp = (has('flightown') ? ov.flightown : pr('flight:' + f.id, f.pp.typ)) + (o.diy.flightExtra || 0); lines.push(['Flights from ' + M.home + ' for this route', pp * 2, (has('flightown') ? 'our own flight price' : f.airline) + (o.diy.flightExtra ? ' plus about ' + eur(o.diy.flightExtra) + ' each for arriving and leaving from different airports' : '')]); }
+      const same = add.filter(a => !xl.includes(a[0]) && !/reserve$/.test(a[0])), dsub = lines.reduce((a, x) => a + x[1], 0) + same.reduce((a, x) => a + x[1], 0);
+      diy = { lines, same, total: dsub * (1 + calc.reservePct / 100) }; }
+    return { priceEur, add, total: sub + res, n, missing: op == null, diy };
   }
   function renderOffers() {
     const mineR = compute(calc), offers = allOffers().map(o => ({ o, c: offerCalc(o) }));
@@ -600,6 +605,8 @@
         <tr><td>Price asked</td><td>–</td>${offers.map(x => x.c.missing ? '<td><span class="status warn">price missing — type it on the card</span></td>' : `<td>${x.o.cur !== 'EUR' ? esc(x.o.cur) + ' ' + Math.round(offerPrice(x.o)).toLocaleString('en-US') + ' = ' : ''}<b>${eur(x.c.priceEur)}</b></td>`).join('')}</tr>
         <tr><td>+ what is missing</td><td>–</td>${offers.map(x => `<td>${eur(x.c.total - x.c.priceEur)}</td>`).join('')}</tr>
         <tr><td><b>Comparable total</b></td><td><b>${eur(mineR.total)}</b></td>${offers.map(x => `<td><b>${x.c.missing ? '?' : eur(x.c.total)}</b></td>`).join('')}</tr>
+        <tr><td>The same trip booked ourselves<br><small class="muted">rough estimate, same hotel class</small></td><td>–</td>${offers.map(x => `<td>${x.c.diy ? '<b>about ' + eur(Math.round(x.c.diy.total / 50) * 50) + '</b>' : '?'}</td>`).join('')}</tr>
+        <tr><td>Package against booking it ourselves</td><td>–</td>${offers.map(x => { if (x.c.missing || !x.c.diy) return '<td>?</td>'; const d = x.c.total - x.c.diy.total; return `<td><span class="status ${Math.abs(d) < 300 ? 'info' : d < 0 ? 'good' : 'bad'}">${Math.abs(d) < 300 ? 'about the same' : d < 0 ? 'package about ' + eur(Math.round(-d / 50) * 50) + ' cheaper' : 'package about ' + eur(Math.round(d / 50) * 50) + ' dearer'}</span></td>`; }).join('')}</tr>
         <tr><td>Against our plan</td><td>–</td>${offers.map(x => { if (x.c.missing) return '<td>?</td>'; const d = x.c.total - mineR.total; return `<td><span class="status ${d <= 0 ? 'good' : 'bad'}">${d <= 0 ? '▼ ' + eur(-d) + ' cheaper' : '▲ ' + eur(d) + ' dearer'}</span></td>`; }).join('')}</tr>
         <tr><td>Per night</td><td>${eur(mineR.total / Math.max(1, mineR.m.nights))}</td>${offers.map(x => `<td>${x.c.missing ? '?' : eur(x.c.total / x.c.n)}</td>`).join('')}</tr></tbody></table></div>
         <p class="muted small">Our own plan is whatever is chosen under Flights, Routes and Hotels. Exchange rates used: £1 = €<input class="fx" type="number" step="0.01" min="0" data-fx="GBP" value="${fx.GBP}"> · $1 = €<input class="fx" type="number" step="0.01" min="0" data-fx="USD" value="${fx.USD}"> — change them to today’s rate.</p></div>` : '<p class="card">No offers yet — add the first one below.</p>'}
@@ -610,6 +617,7 @@
         ${o.includes ? `<h4>What you get</h4><ul class="pros">${o.includes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${o.watch ? `<h4>What to check</h4><ul class="cons">${o.watch.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${o.note ? `<p>${esc(o.note)}</p>` : ''}
         <details class="line"><summary><span>What we add to compare fairly</span><b>${eur(c.total - c.priceEur)}</b></summary><div class="line-body">${c.add.map(a => `<div class="sub"><div><b>${esc(a[0])}</b><span>${eur(a[1])}</span></div><p>${esc(a[2])}</p></div>`).join('')}</div></details>
         <div class="line total"><span>Comparable total for two</span><b>${c.missing ? 'price missing' : eur(c.total)}</b></div>
+        ${c.diy ? `<details class="line"><summary><span>If we booked this same trip ourselves (rough estimate)</span><b>about ${eur(Math.round(c.diy.total / 50) * 50)}</b></summary><div class="line-body"><p class="small">${esc(o.diy.assume || '')}</p>${c.diy.lines.map(a => `<div class="sub"><div><b>${esc(a[0])}</b><span>${eur(a[1])}</span></div><p>${esc(a[2])}</p></div>`).join('')}<div class="sub"><div><b>Plus the same extras as above (meals not included, visas, insurance, shopping) and the reserve</b><span>${eur(c.diy.total - c.diy.lines.reduce((a, x) => a + x[1], 0))}</span></div></div></div></details>` : ''}
         ${o.mine && !PRINT ? `<div class="det-actions"><button class="btn small" data-offerdel="${esc(o.id)}">Delete</button></div>` : ''}</div>`).join('')}</div>
       ${PRINT ? '' : `<div class="card addhotel"><h3>➕ Add an offer from another company</h3><div class="addgrid">
         <label class="field">Company<input type="text" id="of-company" maxlength="60" placeholder="e.g. TUI"></label>
