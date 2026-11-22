@@ -21,7 +21,7 @@ pk.forEach(k => { const p = P[k], w = 'places.' + k; ['name', 'short', 'emoji', 
 E(Array.isArray(T.flights) && T.flights.length >= 3, 'need 3+ flights'); const fids = new Set();
 (T.flights || []).forEach(f => { const w = 'flight ' + f.id; E(str(f.id) && !fids.has(f.id), w + ' id unique'); fids.add(f.id); ['airline', 'via'].forEach(k => E(str(f[k]), w + '.' + k));
   E(num(f.stops) && num(f.durOut) && num(f.durBack), w + ' stops/durOut/durBack'); E(f.pp && num(f.pp.low) && num(f.pp.typ) && num(f.pp.high) && f.pp.low <= f.pp.typ && f.pp.typ <= f.pp.high, w + '.pp low<=typ<=high');
-  E(f.ev === 'near' || f.ev === 'est', w + ".ev must be 'near' or 'est'"); srcOk(f.src, w); });
+  E(['real', 'near', 'est'].includes(f.ev), w + ".ev must be 'real', 'near' or 'est'"); srcOk(f.src, w); });
 E(fids.has(M.bestFlight), 'meta.bestFlight must be a flight id');
 E(T.genericLeg && num(T.genericLeg.pp) && num(T.genericLeg.hours), 'genericLeg');
 Object.keys(T.legs || {}).forEach(k => { const [a, b] = k.split('|'); E(P[a] && P[b] && a < b, 'leg key "' + k + '" must be two place ids sorted alphabetically'); const ids = new Set();

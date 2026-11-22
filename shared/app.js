@@ -259,9 +259,9 @@
 
   /* ---------- ways to save ---------- */
   const SKIP_ACTS = M.skipActs || [];
-  const cheapestFlight = () => T.flights.filter(x => !x.avoid).sort((a, b) => pr('flight:' + a.id, a.pp.typ) - pr('flight:' + b.id, b.pp.typ))[0];
+  const cheapestFlight = () => (T.flights.some(x => !x.avoid && x.ev !== 'est') ? T.flights.filter(x => !x.avoid && x.ev !== 'est') : T.flights.filter(x => !x.avoid)).sort((a, b) => pr('flight:' + a.id, a.pp.typ) - pr('flight:' + b.id, b.pp.typ))[0];
   const SAVERS = [
-    { id: 'flight', icon: '✈️', global: true, keys: [], t: () => 'Fly with ' + cheapestFlight().airline, d: 'The cheapest airline in our list — an estimate with longer layovers, so get a real quote first. Changes the flight for every route.', apply: () => { } },
+    { id: 'flight', icon: '✈️', global: true, keys: [], t: () => 'Fly with ' + cheapestFlight().airline, d: 'The cheapest airline in our list. Check what is included (bags, meals) and how long the stop is. Changes the flight for every route.', apply: () => { } },
     { id: 'hotel', icon: '🏨', keys: ['hotelLvl'], t: () => 'Simple, well-reviewed 3★ hotels', d: 'Clean room, good location, often still a pool — just fewer frills.', apply: c => { c.hotelLvl = 'budget'; } },
     { id: 'food', icon: '🍜', keys: ['foodLvl'], t: () => 'Street food for most meals', d: 'Street stalls and small family places are often the best food anyway; keep a couple of nice dinners.', apply: c => { c.foodLvl = 'local'; } },
     { id: 'gala', icon: '🥂', keys: ['gala'], t: () => 'Pick a hotel without a New-Year gala fee', d: 'Small hotels rarely charge one. Ask before booking.', apply: c => { c.gala = false; } },
@@ -468,7 +468,7 @@
   }
 
   /* ---------- FLIGHTS ---------- */
-  const EV = { near: ['good', 'price seen on the airline’s site'], est: ['warn', 'our estimate'] };
+  const EV = { real: ['good', 'real price for these dates'], near: ['good', 'price seen on the airline’s site'], est: ['warn', 'our estimate'] };
   function flightSum() {
     const f = T.flights.find(x => x.id === gf) || T.flights[0], own = has('flightown'), p = own ? ov.flightown : pr('flight:' + f.id, f.pp.typ);
     const rec = compute(cfgFromScenario(scen(T.meta.recommended)));
@@ -480,8 +480,9 @@
       <p class="muted small">With this flight our trip (${esc(planName())}) costs <b>${eur(compute(calc).total)}</b> for two. ${budgetBadge(compute(calc).total)}</p></div>`;
   }
   function renderFlights() {
-    const sorted = [...T.flights].sort((a, b) => (a.avoid ? 1 : 0) - (b.avoid ? 1 : 0) || pr('flight:' + a.id, a.pp.typ) - pr('flight:' + b.id, b.pp.typ));
-    const ok = sorted.filter(f => !f.avoid), cheap = ok[0], fast = [...ok].sort((a, b) => (a.durOut + a.durBack) - (b.durOut + b.durBack))[0];
+    const rank = f => (f.avoid ? 2 : 0) + (f.ev === 'est' ? 1 : 0);
+    const sorted = [...T.flights].sort((a, b) => rank(a) - rank(b) || pr('flight:' + a.id, a.pp.typ) - pr('flight:' + b.id, b.pp.typ));
+    const ok = sorted.filter(f => !f.avoid && (f.ev !== 'est' || !sorted.some(x => !x.avoid && x.ev !== 'est'))), cheap = ok[0], fast = [...ok].sort((a, b) => (a.durOut + a.durBack) - (b.durOut + b.durBack))[0];
     const badges = f => (f.id === T.meta.bestFlight ? pill('best choice', 'accent') : '') + (f.id === cheap.id ? pill('cheapest') : '') + (f.id === fast.id ? pill('fastest') : '') + (f.avoid ? '<span class="status bad">not for us</span>' : '');
     $('#flights').innerHTML = flowBar('flights') + `<div class="head"><div><h2>Flights from ${esc(M.home)}</h2><p class="muted">Pick one flight. It is used for every route, the comparison and the calculator. Prices are per person, return, with a checked bag.</p></div></div>
       <div id="flight-sum">${flightSum()}</div>
@@ -490,7 +491,7 @@
         <span class="radio"></span><span class="f-main"><b>${esc(f.airline)}</b> ${badges(f)}<small>via ${esc(f.via)} · ${f.stops} stop${f.stops === 1 ? '' : 's'} · ${hrs(f.durOut)} out / ${hrs(f.durBack)} back</small></span>
         <span class="f-price"><b>${eur(pr('flight:' + f.id, f.pp.typ))}</b><small>each</small><span class="status ${EV[f.ev][0]}">${EV[f.ev][1]}</span></span></button>
         <details><summary>Details</summary><p>${esc(f.note || '')} ${esc(f.bag || '')} ${esc(f.arrive ? 'Return: ' + f.arrive + '.' : '')} Likely range ${eur(f.pp.low)}–${eur(f.pp.high)} each. ${srcLinks(f.src)}</p></details></div>`).join('')}</div>
-      <p class="muted small">“Best choice” is the cheapest flight whose price we actually saw on the airline’s site for these dates. Estimates may turn out cheaper — or not. Evening departures usually land in ${esc(M.home)} the next morning — check the arrival date.</p>
+      <p class="muted small">“Best choice” is our pick among the flights with a real price for these dates: a fair price, a checked bag included and no stop in Dubai or Abu Dhabi. Evening departures usually land in ${esc(M.home)} the next morning — check the arrival date.</p>
       ${T.flightAlt ? `<details class="card fold"><summary><b>Other ways to fly</b> — other airports, airlines and ticket types</summary>${T.flightAlt.map(n => `<p><b>${esc(n.t)}</b> ${esc(n.d)} ${srcLinks(n.src)}</p>`).join('')}</details>` : ''}
       <details class="card fold" ${PRINT ? 'open' : ''}><summary><b>Good to know before booking</b></summary>${T.flightNotes.map(n => `<p>${n.icon} <b>${esc(n.t)}</b> ${esc(n.d)} ${srcLinks(n.src)}</p>`).join('')}</details>
       <h2>How to book smart</h2><div class="grid3">${T.flightTips.map(h => `<div class="card"><div class="ico">${h.icon}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p>${srcLinks(h.src)}</div>`).join('')}</div>`;
