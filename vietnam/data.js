@@ -448,7 +448,7 @@
     },
 
     offers: [
-      { id: 'voyage-prive-tranquillite', booked: true, flightFor2: 2993, flightNote: 'real price on turkishairlines.com (our own search, 23 Nov) for one multi-city ticket for two: Vienna → Saigon on 28 Dec via Istanbul, landing 16:30 on 29 Dec, and Hanoi → Vienna on 15 Jan via Istanbul, landing 21:55 the same day. Check that these dates match the tour dates.', company: 'Voyage Privé', name: 'Vietnam en toute tranquillité (guided tour, 5★ hotels)', url: 'https://www.voyage-prive.co.uk/fiche-produit/details/452236',
+      { id: 'voyage-prive-tranquillite', booked: true, flightFor2: 3465, flightNote: 'booked with Turkish Airlines on 23 Nov as one multi-city ticket for two: €2,993 for the flights plus €472 for seats together on the two long flights. Vienna → Saigon on 28 Dec via Istanbul, landing 16:30 on 29 Dec; Hanoi → Vienna on 15 Jan at 08:45 via Istanbul, landing 21:55 the same day. 20 kg checked bag each.', company: 'Voyage Privé', name: 'Vietnam en toute tranquillité (guided tour, 5★ hotels)', url: 'https://www.voyage-prive.co.uk/fiche-produit/details/452236',
         cur: 'GBP', price: 3511, priceNote: 'instead of £4,292; includes a £25 booking fee', dates: '28 Dec 2026 – 14 Jan 2027', nights: 17, beachNights: 0, hotelClass: '5★ hotels', openJaw: 'hanoi',
         incl: { flight: false, hotels: true, domestic: true, meals: 'some', activities: true, visa: false, insurance: false, sim: true },
         diy: { assume: 'The offer does not say how the 17 nights are split, so we assumed 4 Saigon, 3 Hue, 4 Hoi An, 5 Hanoi and 1 on the boat, in ordinary 5★ hotels. Hue, Hoi An and the cruise are our guesses, not checked prices.', lines: [
